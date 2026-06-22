@@ -1,5 +1,4 @@
 import { useStore } from '@/store'
-import { divide, multiply } from 'mathjs'
 import type { ComponentStyle } from '@/types'
 
 /**
@@ -175,7 +174,7 @@ export function mod360(deg: number): number {
  */
 export function changeStyleWithScale(value: number): number {
   const store = useStore()
-  return multiply(value, divide(parseInt(String(store.canvasStyleData.scale)), 100)) as number
+  return value * (store.canvasStyleData.scale / 100)
 }
 
 /**
