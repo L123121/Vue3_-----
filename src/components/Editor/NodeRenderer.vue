@@ -17,6 +17,7 @@
       :prop-value="node.propValue"
       :element="node"
       :request="node.request"
+      :linkage="node.linkage"
     >
       <!-- 子组件通过插槽注入 -->
       <template v-if="children.length">
@@ -39,6 +40,7 @@
       :prop-value="node.propValue"
       :element="node"
       :request="node.request"
+      :linkage="node.linkage"
     >
       <!-- 子组件通过插槽注入 -->
       <template v-if="children.length">
@@ -61,6 +63,7 @@
       :prop-value="node.propValue"
       :element="node"
       :request="node.request"
+      :linkage="node.linkage"
       @input="handleInput"
     />
   </Shape>
