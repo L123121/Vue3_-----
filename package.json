@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "ace-builds": "^1.12.3",
+    "dompurify": "^3.4.11",
     "echarts": "^5.4.1",
     "element-plus": "^2.3.0",
     "html-to-image": "^1.9.0",
@@ -23,6 +24,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@types/dompurify": "^3.0.5",
     "@types/node": "^20.10.0",
     "@typescript-eslint/eslint-plugin": "^6.13.0",
     "@typescript-eslint/parser": "^6.13.0",

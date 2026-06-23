@@ -1,61 +1,77 @@
 /**
- * 事件总线 - 简单的发布订阅模式实现
+ * 事件总线 - 类型安全的发布订阅模式实现
  * Vue 3 移除了 $on $off $emit，使用此类替代
  */
 
-type EventCallback = (...args: unknown[]) => void
+/**
+ * 事件映射表：事件名 → 回调参数类型
+ * 新增事件只需在此添加一行即可获得类型提示
+ */
+export interface EventMap {
+  runAnimation: []
+  stopAnimation: []
+  preview: []
+  save: []
+  clearCanvas: []
+  hideArea: []
+  componentClick: []
+  move: [isDown: boolean, isRight: boolean]
+  unmove: []
+  'v-click': [id: string]
+  'v-hover': [id: string]
+}
+
+type EventName = keyof EventMap
+type EventCallback<T extends EventName> = (...args: EventMap[T]) => void
 
 class EventBus {
-  private events: Record<string, EventCallback[]> = {}
+  private events = new Map<string, Array<(...args: unknown[]) => void>>()
 
   /**
    * 订阅事件
-   * @param event 事件名称
-   * @param callback 回调函数
    */
-  on(event: string, callback: EventCallback): void {
-    if (!this.events[event]) {
-      this.events[event] = []
+  on<T extends EventName>(event: T, callback: EventCallback<T>): void {
+    const list = this.events.get(event)
+    if (list) {
+      list.push(callback)
+    } else {
+      this.events.set(event, [callback])
     }
-    this.events[event].push(callback)
   }
 
   /**
    * 取消订阅事件
-   * @param event 事件名称
-   * @param callback 回调函数（可选，不传则清空该事件所有监听器）
+   * 不传 callback 则清空该事件所有监听器
    */
-  off(event: string, callback?: EventCallback): void {
-    if (!this.events[event]) return
+  off<T extends EventName>(event: T, callback?: EventCallback<T>): void {
+    const list = this.events.get(event)
+    if (!list) return
 
     if (!callback) {
-      this.events[event] = []
+      this.events.set(event, [])
     } else {
-      this.events[event] = this.events[event].filter(cb => cb !== callback)
+      this.events.set(event, list.filter(cb => cb !== callback))
     }
   }
 
   /**
    * 触发事件
-   * @param event 事件名称
-   * @param args 传递给回调的参数
    */
-  emit(event: string, ...args: unknown[]): void {
-    if (!this.events[event]) return
-    this.events[event].forEach(cb => cb(...args))
+  emit<T extends EventName>(event: T, ...args: EventMap[T]): void {
+    const list = this.events.get(event)
+    if (!list) return
+    list.forEach(cb => cb(...args))
   }
 
   /**
    * 一次性订阅事件（触发后自动取消）
-   * @param event 事件名称
-   * @param callback 回调函数
    */
-  once(event: string, callback: EventCallback): void {
-    const wrapper: EventCallback = (...args) => {
-      this.off(event, wrapper)
+  once<T extends EventName>(event: T, callback: EventCallback<T>): void {
+    const wrapper = (...args: EventMap[T]): void => {
+      this.off(event, wrapper as EventCallback<T>)
       callback(...args)
     }
-    this.on(event, wrapper)
+    this.on(event, wrapper as EventCallback<T>)
   }
 }
 

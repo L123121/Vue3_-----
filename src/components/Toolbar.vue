@@ -1,80 +1,85 @@
 <template>
     <div>
         <div :class="isDarkMode ? 'dark toolbar' : 'toolbar'">
-            <el-button-group>
-                <el-button @click="onAceEditorChange" :icon="Edit">JSON</el-button>
-                <el-button @click="onImportJSON" :icon="Upload">导入</el-button>
-                <el-button @click="onExportJSON" :icon="Download">导出</el-button>
-            </el-button-group>
-            
-            <el-button-group class="ml-10">
-                <el-button @click="undo" :icon="RefreshLeft">撤消</el-button>
-                <el-button @click="redo" :icon="RefreshRight">重做</el-button>
-            </el-button-group>
+            <!-- 左侧按钮组 -->
+            <div class="toolbar-left">
+                <!-- 数据 -->
+                <div class="btn-group">
+                    <span class="group-label">数据</span>
+                    <el-button @click="onAceEditorChange" :icon="Edit" size="small">JSON</el-button>
+                    <el-button @click="onImportJSON" :icon="Upload" size="small">导入</el-button>
+                    <el-button @click="onExportJSON" :icon="Download" size="small">导出</el-button>
+                    <el-button @click="onExportHTML" :icon="Document" size="small">导出 HTML</el-button>
+                </div>
 
-            <label for="input" class="insert">
-                <el-button :icon="Picture" style="pointer-events: none;">插入图片</el-button>
-                <input
-                    id="input"
-                    type="file"
-                    hidden
-                    @change="handleFileChange"
+                <!-- 编辑 -->
+                <div class="btn-group">
+                    <span class="group-label">编辑</span>
+                    <el-button @click="undo" :icon="RefreshLeft" size="small">撤销</el-button>
+                    <el-button @click="redo" :icon="RefreshRight" size="small">重做</el-button>
+                </div>
+
+                <!-- 插入 -->
+                <div class="btn-group">
+                    <span class="group-label">插入</span>
+                    <label for="input" class="upload-label">
+                        <el-button :icon="Picture" size="small">图片</el-button>
+                        <input id="input" type="file" hidden accept="image/*" @change="handleFileChange" />
+                    </label>
+                </div>
+
+                <!-- 画布 -->
+                <div class="btn-group">
+                    <span class="group-label">画布</span>
+                    <el-button @click="preview(false)" :icon="View" size="small">预览</el-button>
+                    <el-button @click="save" :icon="FolderChecked" size="small">保存</el-button>
+                    <el-button @click="clearCanvas" :icon="Delete" size="small">清空</el-button>
+                    <el-button @click="preview(true)" :icon="Camera" size="small">截图</el-button>
+                </div>
+
+                <!-- 组件 -->
+                <div class="btn-group">
+                    <span class="group-label">组件</span>
+                    <el-button :disabled="!areaData.components.length" @click="compose" :icon="Connection" size="small">组合</el-button>
+                    <el-button :disabled="!curComponent || curComponent.isLock || curComponent.component != 'Group'" @click="decompose" :icon="Remove" size="small">拆分</el-button>
+                    <el-button :disabled="!curComponent || curComponent.isLock" @click="lock" :icon="Lock" size="small">锁定</el-button>
+                    <el-button :disabled="!curComponent || !curComponent.isLock" @click="unlock" :icon="Unlock" size="small">解锁</el-button>
+                </div>
+
+                <!-- 更多 -->
+                <div class="btn-group">
+                    <span class="group-label">更多</span>
+                    <el-button @click="showVersionHistory" :icon="Clock" size="small">版本</el-button>
+                </div>
+            </div>
+
+            <!-- 右侧：画布配置 + 主题 -->
+            <div class="toolbar-right">
+                <div class="canvas-config">
+                    <label>画布</label>
+                    <input v-model="canvasStyleData.width" class="canvas-input" />
+                    <span class="separator">×</span>
+                    <input v-model="canvasStyleData.height" class="canvas-input" />
+                </div>
+                <div class="canvas-config">
+                    <label>比例</label>
+                    <input v-model="scale" class="canvas-input scale-input" @input="handleScaleChange" />
+                    <span>%</span>
+                </div>
+                <el-divider direction="vertical" />
+                <el-switch
+                    v-model="switchValue"
+                    :active-icon="Sunny"
+                    :inactive-icon="Moon"
+                    inline-prompt
+                    @change="handleToggleDarkMode"
                 />
-            </label>
-
-            <el-button-group class="ml-10">
-                <el-button @click="preview(false)" :icon="View">预览</el-button>
-                <el-button @click="save" :icon="FolderChecked">保存</el-button>
-                <el-button @click="clearCanvas" :icon="Delete">清空</el-button>
-                <el-button @click="preview(true)" :icon="Camera">截图</el-button>
-            </el-button-group>
-
-            <el-button-group class="ml-10">
-                <el-button :disabled="!areaData.components.length" @click="compose" :icon="Connection">组合</el-button>
-                <el-button
-                    :disabled="!curComponent || curComponent.isLock || curComponent.component != 'Group'"
-                    @click="decompose"
-                    :icon="Remove"
-                >
-                    拆分
-                </el-button>
-            </el-button-group>
-
-            <el-button-group class="ml-10">
-                <el-button :disabled="!curComponent || curComponent.isLock" @click="lock" :icon="Lock">锁定</el-button>
-                <el-button :disabled="!curComponent || !curComponent.isLock" @click="unlock" :icon="Unlock">解锁</el-button>
-            </el-button-group>
-
-            <el-button-group class="ml-10">
-                <el-button @click="showVersionHistory" :icon="Clock">版本历史</el-button>
-            </el-button-group>
-
-            <div class="canvas-config ml-10">
-                <span>画布大小</span>
-                <input v-model="canvasStyleData.width" />
-                <span>*</span>
-                <input v-model="canvasStyleData.height" />
             </div>
-            <div class="canvas-config">
-                <span>画布比例</span>
-                <input v-model="scale" @input="handleScaleChange" /> %
-            </div>
-            <el-switch
-                v-model="switchValue"
-                class="dark-mode-switch"
-                :active-icon="Sunny"
-                :inactive-icon="Moon"
-                active-color="#000"
-                @change="handleToggleDarkMode"
-            >
-            </el-switch>
         </div>
 
-        <!-- 预览 -->
         <Preview v-if="isShowPreview" :is-screenshot="isScreenshot" @close="handlePreviewChange" />
         <AceEditor v-if="isShowAceEditor" @closeEditor="closeEditor" />
 
-        <!-- 版本历史面板 -->
         <el-drawer
             v-model="isShowVersionHistory"
             title="版本历史"
@@ -92,13 +97,7 @@
             :close-on-click-modal="false"
             width="600px"
         >
-            <el-input
-                v-model="jsonData"
-                type="textarea"
-                :rows="20"
-                placeholder="请输入 JSON 数据"
-            >
-            </el-input>
+            <el-input v-model="jsonData" type="textarea" :rows="20" placeholder="请输入 JSON 数据" />
             <template #footer>
                 <div class="dialog-footer">
                     <el-button @click="isShowDialog = false">取 消</el-button>
@@ -134,12 +133,12 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import {
     Sunny, Moon, Edit, Upload, Download, RefreshLeft, RefreshRight,
     Picture, View, FolderChecked, Delete, Camera, Connection,
-    Remove, Lock, Unlock, Clock
+    Remove, Lock, Unlock, Clock, Document
 } from '@element-plus/icons-vue'
 import type { ComponentData, CanvasStyleData, ComponentStyle } from '@/types'
 import { validateAuto } from '@/utils/validation'
+import { exportToHtml, downloadHtmlFile } from '@/utils/exportHtml'
 
-// 导出数据格式
 interface ExportData {
     version: string
     timestamp: number
@@ -161,7 +160,6 @@ const jsonData = ref('')
 const isExport = ref(false)
 const isShowVersionHistory = ref(false)
 
-// 当前版本号，用于数据兼容性检查
 const DATA_VERSION = '1.0.0'
 
 onMounted(() => {
@@ -172,7 +170,11 @@ onMounted(() => {
     scale.value = canvasStyleData.value.scale
     const savedMode = localStorage.getItem('isDarkMode')
     if (savedMode) {
-        handleToggleDarkMode(JSON.parse(savedMode))
+        try {
+            handleToggleDarkMode(JSON.parse(savedMode))
+        } catch {
+            handleToggleDarkMode(false)
+        }
     }
 })
 
@@ -189,46 +191,20 @@ function handleToggleDarkMode(value: boolean): void {
 
 function handleScaleChange(): void {
     if (timer.value) clearTimeout(timer.value)
-    store.setLastScale(scale.value)
     timer.value = setTimeout(() => {
-        // 画布比例设一个最小值，不能为 0
-        // eslint-disable-next-line no-bitwise
         scale.value = ~~scale.value || 1
         changeComponentsSizeWithScale(scale.value)
     }, 1000)
 }
 
-function onAceEditorChange() {
-    isShowAceEditor.value = !isShowAceEditor.value
-}
-
-function closeEditor() {
-    onAceEditorChange()
-}
-
-function lock() {
-    store.lock()
-}
-
-function unlock() {
-    store.unlock()
-}
-
-function compose() {
-    store.composeWithCommand()
-}
-
-function decompose() {
-    store.decomposeWithCommand()
-}
-
-function undo() {
-    store.undo()
-}
-
-function redo() {
-    store.redo()
-}
+function onAceEditorChange() { isShowAceEditor.value = !isShowAceEditor.value }
+function closeEditor() { onAceEditorChange() }
+function lock() { store.lock() }
+function unlock() { store.unlock() }
+function compose() { store.composeWithCommand() }
+function decompose() { store.decomposeWithCommand() }
+function undo() { store.undo() }
+function redo() { store.redo() }
 
 function handleFileChange(e: Event): void {
     const target = e.target as HTMLInputElement
@@ -253,10 +229,7 @@ function handleFileChange(e: Event): void {
                 icon: '',
                 propValue: {
                     url: fileResult,
-                    flip: {
-                        horizontal: false,
-                        vertical: false,
-                    },
+                    flip: { horizontal: false, vertical: false },
                 },
                 style: {
                     ...commonStyle,
@@ -266,23 +239,14 @@ function handleFileChange(e: Event): void {
                     height: img.height,
                 } as ComponentStyle,
             }
-
-            // 根据画面比例修改组件样式比例 https://github.com/woai3c/visual-drag-demo/issues/91
             changeComponentSizeWithScale(component)
-
             store.addComponentWithCommand(component)
 
-            // 修复重复上传同一文件，@change 不触发的问题
             const input = $('#input') as HTMLInputElement
-            if (input) {
-                input.type = 'text'
-                input.type = 'file'
-            }
+            if (input) { input.type = 'text'; input.type = 'file' }
         }
-
         img.src = fileResult
     }
-
     reader.readAsDataURL(file)
 }
 
@@ -293,22 +257,23 @@ function preview(screenshot: boolean): void {
 }
 
 function save(): void {
-    localStorage.setItem('canvasData', JSON.stringify(componentData.value))
-    localStorage.setItem('canvasStyle', JSON.stringify(canvasStyleData.value))
-    ElMessage.success('保存成功')
+    try {
+        localStorage.setItem('canvasData', JSON.stringify(componentData.value))
+        localStorage.setItem('canvasStyle', JSON.stringify(canvasStyleData.value))
+        ElMessage.success('保存成功')
+    } catch (e) {
+        ElMessage.error('保存失败，请检查浏览器存储空间')
+        console.error('保存失败:', e)
+    }
 }
 
 function clearCanvas(): void {
     ElMessageBox.confirm('确定要清空画布吗？', '提示', {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning',
+        confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning',
     }).then(() => {
         store.clearCanvasWithCommand()
         ElMessage.success('画布已清空')
-    }).catch(() => {
-        // 用户取消
-    })
+    }).catch(() => {})
 }
 
 function handlePreviewChange(): void {
@@ -322,14 +287,10 @@ function onImportJSON(): void {
     isShowDialog.value = true
 }
 
-/**
- * 为组件生成新的 ID（导入时避免 ID 冲突）
- */
 function regenerateComponentIds(components: ComponentData[]): ComponentData[] {
     return components.map(comp => ({
         ...comp,
         id: generateID(),
-        // 如果是组合组件，递归处理子组件
         ...(comp.component === 'Group' && Array.isArray(comp.propValue)
             ? { propValue: regenerateComponentIds(comp.propValue as ComponentData[]) }
             : {})
@@ -339,220 +300,237 @@ function regenerateComponentIds(components: ComponentData[]): ComponentData[] {
 function processJSON(): void {
     try {
         const data = JSON.parse(jsonData.value)
-
         if (isExport.value) {
-            // 导出：下载文件
             downloadFileUtil(jsonData.value, 'application/json', `lowcode-project-${Date.now()}.json`)
             ElMessage.success('导出成功')
         } else {
-            // 导入：使用 Zod 校验
             const result = validateAuto(data)
             if (!result.success) {
                 ElMessage.error(`数据校验失败: ${result.errors?.join(', ')}`)
                 return
             }
-
             const { componentData: components, canvasStyle } = result.data!
-
-            // 为组件生成新 ID，避免冲突
             const newComponents = regenerateComponentIds(components)
 
-            // 如果当前画布有内容，询问是否覆盖
             if (componentData.value.length > 0) {
-                ElMessageBox.confirm(
-                    '当前画布有内容，导入将覆盖现有内容，是否继续？',
-                    '导入确认',
-                    {
-                        confirmButtonText: '覆盖',
-                        cancelButtonText: '取消',
-                        type: 'warning',
-                    }
-                ).then(() => {
-                    applyImport(newComponents, canvasStyle ?? null)
-                }).catch(() => {
-                    // 用户取消
-                })
+                ElMessageBox.confirm('当前画布有内容，导入将覆盖现有内容，是否继续？', '导入确认',
+                    { confirmButtonText: '覆盖', cancelButtonText: '取消', type: 'warning' }
+                ).then(() => applyImport(newComponents, canvasStyle ?? null))
+                .catch(() => {})
             } else {
                 applyImport(newComponents, canvasStyle ?? null)
             }
         }
-
         isShowDialog.value = false
     } catch (error) {
         ElMessage.error('数据格式错误，请传入合法的 JSON 格式数据')
-        console.error('Import error:', error)
     }
 }
 
-/**
- * 应用导入的数据
- */
 function applyImport(components: ComponentData[], canvasStyle: CanvasStyleData | null): void {
     store.importDataWithCommand(components, canvasStyle ?? undefined)
-    if (canvasStyle) {
-        scale.value = canvasStyle.scale
-    }
+    if (canvasStyle) { scale.value = canvasStyle.scale }
     ElMessage.success(`导入成功，共 ${components.length} 个组件`)
 }
 
 function onExportJSON(): void {
     isShowDialog.value = true
     isExport.value = true
-
-    // 导出完整的项目数据（包含画布样式）
     const exportData: ExportData = {
         version: DATA_VERSION,
         timestamp: Date.now(),
         canvasStyle: canvasStyleData.value,
         componentData: componentData.value,
     }
-
     jsonData.value = JSON.stringify(exportData, null, 2)
 }
 
-/**
- * 下载文件工具函数
- */
+function onExportHTML(): void {
+    if (componentData.value.length === 0) {
+        ElMessage.warning('画布为空，请先添加组件')
+        return
+    }
+
+    const html = exportToHtml({
+        title: '低代码页面',
+        componentData: componentData.value,
+        canvasStyle: canvasStyleData.value,
+    })
+
+    // 生成文件名（包含时间戳）
+    const now = new Date()
+    const timestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+    downloadHtmlFile(html, `page-${timestamp}.html`)
+
+    ElMessage.success('HTML 导出成功，双击文件即可预览')
+}
+
 function downloadFileUtil(data: string, type: string, fileName: string): void {
     const url = window.URL.createObjectURL(new Blob([data], { type }))
     const link = document.createElement('a')
-
     link.style.display = 'none'
     link.href = url
     link.setAttribute('download', fileName)
     document.body.appendChild(link)
     link.click()
-
     document.body.removeChild(link)
     window.URL.revokeObjectURL(url)
 }
 
-/**
- * 上传文件前的处理
- */
 function beforeUpload(file: File): boolean {
-    // 检查文件类型
     if (!file.name.endsWith('.json') && file.type !== 'application/json') {
         ElMessage.error('只支持 JSON 格式文件')
         return false
     }
-
-    // 检查文件大小（限制 10MB）
     const maxSize = 10 * 1024 * 1024
     if (file.size > maxSize) {
         ElMessage.error('文件大小不能超过 10MB')
         return false
     }
-
     const reader = new FileReader()
     reader.readAsText(file)
-    reader.onload = function () {
-        jsonData.value = this.result as string
-    }
-    reader.onerror = function () {
-        ElMessage.error('文件读取失败')
-    }
-
+    reader.onload = function () { jsonData.value = this.result as string }
     return false
 }
 
-function showVersionHistory(): void {
-    isShowVersionHistory.value = true
-}
+function showVersionHistory(): void { isShowVersionHistory.value = true }
 </script>
 
 <style lang="scss" scoped>
 .toolbar {
-    height: var(--toolbar-height);
-    line-height: var(--toolbar-height);
-    background: #fff;
-    border-bottom: 1px solid var(--toolbar-border-color);
-    padding: 0 20px;
+    height: 48px;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border-color);
+    padding: 0 16px;
     display: flex;
     align-items: center;
-    gap: 12px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-    z-index: 100;
+    justify-content: space-between;
     position: relative;
+    z-index: 110;
 
-    .ml-10 {
-        margin-left: 0;
+    .toolbar-left {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex: 1;
+        min-width: 0;
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding: 4px 0;
+
+        // 隐藏滚动条
+        scrollbar-width: none;
+        &::-webkit-scrollbar { display: none; }
+    }
+
+    .toolbar-right {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-shrink: 0;
+        margin-left: 12px;
+    }
+
+    .btn-group {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        flex-shrink: 0;
+
+        .group-label {
+            font-size: 11px;
+            color: var(--secondary-text-color);
+            margin-right: 4px;
+            user-select: none;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+            line-height: 28px;
+        }
+
+        .el-button {
+            padding: 4px 8px;
+            font-size: 12px;
+            border-radius: 4px;
+            border-color: transparent;
+            height: 28px;
+            line-height: 1;
+            font-weight: 450;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s;
+
+            &:hover {
+                background-color: var(--button-active-bg-color);
+                color: var(--primary-color);
+            }
+
+            &.is-disabled { opacity: 0.35; }
+        }
+    }
+
+    .upload-label {
+        display: inline-flex;
+        cursor: pointer;
     }
 
     .canvas-config {
         display: flex;
         align-items: center;
-        font-size: 13px;
-        color: var(--secondary-text-color);
-        gap: 8px;
-        margin-left: 12px;
-        padding-left: 12px;
-        border-left: 1px solid var(--border-color);
+        gap: 3px;
+        font-size: 12px;
+        color: var(--text-color);
+        white-space: nowrap;
 
-        input {
-            width: 50px;
-            height: 28px;
+        label {
+            color: var(--secondary-text-color);
+            font-size: 12px;
+        }
+
+        .separator { color: var(--secondary-text-color); }
+
+        .canvas-input {
+            width: 46px;
+            height: 26px;
+            padding: 0 4px;
             border: 1px solid var(--border-color);
-            outline: none;
-            text-align: center;
             border-radius: 4px;
             font-size: 12px;
+            text-align: center;
+            outline: none;
+            background: var(--main-bg-color);
             color: var(--text-color);
-            transition: border-color 0.2s;
 
             &:focus {
                 border-color: var(--primary-color);
             }
         }
 
-        span {
-            white-space: nowrap;
-        }
+        .scale-input { width: 42px; }
     }
 
-    .insert {
-        display: inline-block;
-        line-height: 1;
-        vertical-align: middle;
+    :deep(.el-switch) {
+        --el-switch-on-color: var(--primary-color);
     }
 
-    .dark-mode-switch {
-        margin-left: auto;
+    :deep(.el-divider--vertical) {
+        height: 20px;
+        border-color: var(--border-color);
     }
+}
 
-    :deep(.el-button) {
-        height: 32px;
-        padding: 8px 15px;
-        font-size: 13px;
-        border-radius: 4px;
-        
-        &.is-disabled {
-            background-color: transparent;
-        }
-    }
-
-    :deep(.el-button-group) {
-        display: flex;
-        gap: 1px;
-        background: var(--border-color);
-        border-radius: 4px;
-        overflow: hidden;
-        border: 1px solid var(--border-color);
-
-        .el-button {
-            border: none;
-            margin: 0;
-            border-radius: 0;
-        }
-    }
+.dark.toolbar {
+    background: rgba(24, 24, 27, 0.9);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
 }
 
 .dialog-footer {
     display: flex;
     justify-content: flex-end;
-
-    & > * {
-        margin-left: 10px;
-    }
+    gap: 10px;
 }
 </style>

@@ -11,7 +11,8 @@ export default async function runAnimation(
 ): Promise<void> {
   const play = (animation: Animation): Promise<void> =>
     new Promise(resolve => {
-      const { animationTime = 1, type: value = '', infinite: isLoop } = animation
+      const { duration = 1000, type: value = '', infinite: isLoop } = animation
+      const animationTime = duration / 1000 // 转换为秒
 
       $el.style.setProperty('--time', `${animationTime}s`)
       $el.classList.add(value, 'animated', utilsHandle(isLoop))

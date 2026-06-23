@@ -1,5 +1,5 @@
 <template>
-  <div class="group">
+  <div ref="groupRef" class="group">
     <div>
       <component
         :is="item.component"
@@ -17,6 +17,7 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
 import { useOnEvent } from '../common/useOnEvent'
 import type { ComponentData, LinkageConfig } from '@/types'
 
@@ -27,8 +28,9 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+const groupRef = ref<HTMLElement | null>(null)
 
-useOnEvent(props)
+useOnEvent(props, groupRef)
 </script>
 
 <style lang="scss" scoped>

@@ -1,10 +1,11 @@
 <template>
-  <div class="circle-shape">
+  <div ref="circleRef" class="circle-shape">
     <VText :prop-value="element.propValue" :element="element" />
   </div>
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
 import { useOnEvent } from '../common/useOnEvent'
 import type { ComponentData, LinkageConfig } from '@/types'
 
@@ -15,8 +16,9 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+const circleRef = ref<HTMLElement | null>(null)
 
-useOnEvent(props)
+useOnEvent(props, circleRef)
 </script>
 
 <style lang="scss" scoped>

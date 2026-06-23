@@ -1,8 +1,9 @@
 <template>
-  <v-chart ref="chart" class="chart" :option="propValue.option" autoresize />
+  <v-chart ref="chartRef" class="chart" :option="propValue.option" autoresize />
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { ScatterChart, BarChart, LineChart } from 'echarts/charts'
@@ -29,8 +30,9 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+const chartRef = ref<HTMLElement | null>(null)
 
-useOnEvent(props)
+useOnEvent(props, chartRef)
 </script>
 
 <style scoped>

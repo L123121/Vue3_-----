@@ -16,12 +16,10 @@ import type {
 } from '@/types'
 import { deepCopy, swap, $ } from '@/utils/utils'
 import eventBus from '@/utils/eventBus'
-import animationClassData from '@/utils/animationClassData'
 import { ElMessage } from 'element-plus'
 import generateID from '@/utils/generateID'
-import decomposeComponent from '@/utils/decomposeComponent'
-import { createGroupStyle } from '@/utils/style'
 import { CommandManager } from '@/commands/CommandManager'
+import { validatePageVersions } from '@/utils/validation'
 import {
   MoveCommand,
   ResizeCommand,
@@ -75,9 +73,15 @@ export const useStore = defineStore('main', {
       components: [],
     },
     versions: [],
+    dataVersion: 0,
   }),
 
   actions: {
+    /** 标记数据已变更，触发自动保存 */
+    markDataDirty(): void {
+      this.dataVersion++
+    },
+
     setClickComponentStatus(status: boolean): void {
       this.isClickComponent = status
     },
@@ -121,14 +125,36 @@ export const useStore = defineStore('main', {
 
     setComponentData(componentData: ComponentData[] = []): void {
       this.componentData = componentData
+      // 兼容旧数据：为没有 zIndex 的组件自动分配（循环进位 +2，避免冲突）
+      this.ensureZIndex()
+      this.markDataDirty()
     },
 
     addComponent({ component, index }: AddComponentPayload): void {
+      // 自动分配 zIndex = 当前最大值 + 1（保证新组件在最上面）
+      const maxZ = this.componentData.reduce((max, c) => Math.max(max, c.zIndex || 0), 0)
+      component.zIndex = maxZ + 1
+
       if (index !== undefined) {
         this.componentData.splice(index, 0, component)
       } else {
         this.componentData.push(component)
       }
+      this.markDataDirty()
+    },
+
+    /**
+     * 为所有组件分配连续 zIndex（1,2,3...），按数组当前顺序
+     * 用于数据加载后的兼容处理
+     */
+    ensureZIndex(): void {
+      let hasMissing = false
+      for (const c of this.componentData) {
+        if (!c.zIndex || c.zIndex === 0) { hasMissing = true; break }
+      }
+      if (!hasMissing) return
+      // 按数组顺序重排 zIndex
+      this.componentData.forEach((c, i) => { c.zIndex = (i + 1) * 2 })
     },
 
     deleteComponent(index?: number): void {
@@ -145,10 +171,11 @@ export const useStore = defineStore('main', {
 
       if (typeof index === 'number' && index >= 0) {
         this.componentData.splice(index, 1)
+        this.markDataDirty()
       }
     },
 
-    isShowRightList(): void {
+    toggleRightList(): void {
       this.rightList = !this.rightList
     },
 
@@ -158,41 +185,59 @@ export const useStore = defineStore('main', {
       }
     },
 
+    /**
+     * 上移一层：与 zIndex = current + 1 的组件交换 zIndex 值
+     * 视觉上当前组件向上移动一层
+     */
     upComponent(): void {
-      // 上移图层 index，往后移
-      if (this.curComponentIndex !== null && this.curComponentIndex < this.componentData.length - 1) {
-        swap(this.componentData, this.curComponentIndex, this.curComponentIndex + 1)
-        this.curComponentIndex = this.curComponentIndex + 1
+      if (!this.curComponent) { ElMessage.warning('请选择组件'); return }
+      const curZ = this.curComponent.zIndex
+      // 找 zIndex 刚好比当前大 1 的组件
+      const above = this.componentData.find(c => c.zIndex === curZ + 1)
+      if (above) {
+        above.zIndex = curZ
+        this.curComponent.zIndex = curZ + 1
+        this.markDataDirty()
       } else {
         ElMessage.warning('已经到顶了')
       }
     },
 
+    /**
+     * 下移一层：与 zIndex = current - 1 的组件交换 zIndex 值
+     */
     downComponent(): void {
-      // 下移图层 index，往前移
-      if (this.curComponentIndex !== null && this.curComponentIndex > 0) {
-        swap(this.componentData, this.curComponentIndex, this.curComponentIndex - 1)
-        this.curComponentIndex = this.curComponentIndex - 1
+      if (!this.curComponent) { ElMessage.warning('请选择组件'); return }
+      const curZ = this.curComponent.zIndex
+      const below = this.componentData.find(c => c.zIndex === curZ - 1)
+      if (below) {
+        below.zIndex = curZ
+        this.curComponent.zIndex = curZ - 1
+        this.markDataDirty()
       } else {
         ElMessage.warning('已经到底了')
       }
     },
 
     topComponent(): void {
-      // 置顶
-      if (this.curComponentIndex !== null && this.curComponentIndex < this.componentData.length - 1) {
-        swap(this.componentData, this.curComponentIndex, this.componentData.length - 1)
-        this.curComponentIndex = this.componentData.length - 1
+      // 置顶：zIndex = 当前最大值 + 1
+      if (!this.curComponent) { ElMessage.warning('请选择组件'); return }
+      const maxZ = this.componentData.reduce((max, c) => Math.max(max, c.zIndex), 0)
+      if (this.curComponent.zIndex < maxZ) {
+        this.curComponent.zIndex = maxZ + 1
+        this.markDataDirty()
       } else {
         ElMessage.warning('已经到顶了')
       }
     },
 
     bottomComponent(): void {
-      // 置底
-      if (this.curComponentIndex !== null && this.curComponentIndex > 0) {
-        swap(this.componentData, this.curComponentIndex, 0)
-        this.curComponentIndex = 0
+      // 置底：zIndex = 当前最小值 - 1（最低为 1）
+      if (!this.curComponent) { ElMessage.warning('请选择组件'); return }
+      const minZ = this.componentData.reduce((min, c) => Math.min(min, c.zIndex), Infinity)
+      if (this.curComponent.zIndex > minZ) {
+        this.curComponent.zIndex = Math.max(1, minZ - 1)
+        this.markDataDirty()
       } else {
         ElMessage.warning('已经到底了')
       }
@@ -253,6 +298,7 @@ export const useStore = defineStore('main', {
      */
     executeCommand(command: Command): void {
       commandManager.execute(command)
+      this.markDataDirty()
     },
 
     /**
@@ -261,6 +307,7 @@ export const useStore = defineStore('main', {
     undo(): void {
       commandManager.undo()
       this.refreshCurComponent()
+      this.markDataDirty()
     },
 
     /**
@@ -269,6 +316,7 @@ export const useStore = defineStore('main', {
     redo(): void {
       commandManager.redo()
       this.refreshCurComponent()
+      this.markDataDirty()
     },
 
     /**
@@ -437,85 +485,6 @@ export const useStore = defineStore('main', {
       }
     },
 
-    compose(): void {
-      if (this.areaData.components.length) {
-        const components: ComponentData[] = []
-        this.areaData.components.forEach(component => {
-          if (component.component !== 'Group') {
-            components.push(component)
-          } else {
-            // 如果要组合的组件中，已经存在组合数据，则需要提前拆分
-            const parentStyle = { ...component.style }
-            const subComponents = component.propValue as ComponentData[]
-            const editorRect = this.editor!.getBoundingClientRect()
-
-            subComponents.forEach(subComponent => {
-              decomposeComponent(subComponent, editorRect, parentStyle)
-            })
-
-            components.push(...subComponents)
-          }
-        })
-
-        const groupComponent: ComponentData = {
-          id: generateID(),
-          component: 'Group',
-          label: '组合',
-          icon: 'qunzu',
-          style: {
-            ...this.areaData.style,
-          } as ComponentStyle,
-          propValue: components,
-          animations: [],
-          events: {},
-          groupStyle: {},
-          isLock: false,
-          collapseName: 'style',
-          linkage: {
-            duration: 0,
-            data: [
-              {
-                id: '',
-                label: '',
-                event: '',
-                style: [{ key: '', value: '' }],
-              },
-            ],
-          },
-        }
-
-        createGroupStyle(groupComponent)
-
-        this.addComponent({ component: groupComponent })
-
-        eventBus.emit('hideArea')
-
-        this.setCurComponent({
-          component: groupComponent,
-          index: this.componentData.length - 1,
-        })
-
-        this.areaData.components.forEach(component => {
-          this.deleteComponent(this.componentData.findIndex(item => item.id === component.id))
-        })
-      }
-    },
-
-    decompose(): void {
-      if (!this.curComponent || !this.editor) return
-
-      const parentStyle = { ...this.curComponent.style }
-      const components = this.curComponent.propValue as ComponentData[]
-      const editorRect = this.editor.getBoundingClientRect()
-
-      components.forEach(component => {
-        decomposeComponent(component, editorRect, parentStyle)
-        this.addComponent({ component })
-      })
-
-      this.deleteComponent()
-    },
-
     copy(): void {
       if (!this.curComponent) {
         ElMessage.warning('请选择组件')
@@ -611,7 +580,14 @@ export const useStore = defineStore('main', {
       const data = localStorage.getItem('pageVersions')
       if (data) {
         try {
-          this.versions = JSON.parse(data)
+          const parsed = JSON.parse(data)
+          const result = validatePageVersions(parsed)
+          if (result.success && result.data) {
+            this.versions = result.data
+          } else {
+            console.warn('版本数据校验失败，已重置:', result.errors)
+            this.versions = []
+          }
         } catch {
           this.versions = []
         }

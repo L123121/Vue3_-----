@@ -1,5 +1,5 @@
 <template>
-  <div class="svg-triangle-container">
+  <div ref="containerRef" class="svg-triangle-container">
     <svg version="1.1" baseProfile="full" xmlns="http://www.w3.org/2000/svg">
       <polygon
         ref="triangle"
@@ -25,9 +25,10 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+const containerRef = ref<HTMLElement | null>(null)
 
 const points = ref('')
-useOnEvent(props)
+useOnEvent(props, containerRef)
 
 onMounted(() => {
   draw()

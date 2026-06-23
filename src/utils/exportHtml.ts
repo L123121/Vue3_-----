@@ -13,6 +13,7 @@
  */
 
 import type { ComponentData, CanvasStyleData, Animation } from '@/types'
+import { escapeHtml, isValidImageUrl, isValidCssColor } from './sanitize'
 
 // ==================== 嵌入的动画关键帧（animate.css 子集） ====================
 
@@ -162,12 +163,11 @@ function renderVButton(ctx: RenderContext): string {
   const { component } = ctx
   const text = component.propValue as string || ''
   const style = styleToInline(component.style as unknown as Record<string, unknown>)
-  const eventCode = buildEventCode(component.events)
-  const cursor = 'cursor:pointer'
   const animAttr = getAnimationAttributes(component.animations)
-  const escapedText = text.replace(/"/g, '&quot;')
+  const escapedText = escapeHtml(text)
+  const eventData = buildEventAttribute(component.events)
 
-  return `<div ${animAttr} style="position:absolute; display:flex; align-items:center; justify-content:center; ${style}; ${cursor}" onclick="${eventCode}">${escapedText}</div>`
+  return `<div ${animAttr} style="position:absolute; display:flex; align-items:center; justify-content:center; ${style}; cursor:pointer" ${eventData}>${escapedText}</div>`
 }
 
 /**
@@ -178,13 +178,14 @@ function renderPicture(ctx: RenderContext): string {
   const propValue = component.propValue as { url?: string; flip?: { horizontal?: boolean; vertical?: boolean } } || {}
   const style = styleToInline(component.style as unknown as Record<string, unknown>)
   const imgUrl = propValue.url || ''
+  const safeUrl = isValidImageUrl(imgUrl) ? escapeHtml(imgUrl) : ''
   const flipTransform = []
   if (propValue.flip?.horizontal) flipTransform.push('scaleX(-1)')
   if (propValue.flip?.vertical) flipTransform.push('scaleY(-1)')
   const imgStyle = flipTransform.length ? `transform: ${flipTransform.join(' ')}` : ''
   const animAttr = getAnimationAttributes(component.animations)
 
-  return `<div ${animAttr} style="position:absolute; ${style}"><img src="${imgUrl}" style="width:100%;height:100%;object-fit:fill;${imgStyle}" /></div>`
+  return `<div ${animAttr} style="position:absolute; ${style}"><img src="${safeUrl}" style="width:100%;height:100%;object-fit:fill;${imgStyle}" /></div>`
 }
 
 /**
@@ -281,9 +282,9 @@ function renderVTable(ctx: RenderContext): string {
 
   const headerRow = data[0] || []
   const bodyRows = data.slice(1)
-  const headers = headerRow.map((h: string) => `<th style="border:1px solid #d9d9d9;padding:4px 8px;${propValue.thBold ? 'font-weight:bold' : ''}">${h}</th>`).join('')
+  const headers = headerRow.map((h: string) => `<th style="border:1px solid #d9d9d9;padding:4px 8px;${propValue.thBold ? 'font-weight:bold' : ''}">${escapeHtml(h)}</th>`).join('')
   const rows = bodyRows.map((row: string[]) => {
-    const cells = row.map((cell: string) => `<td style="border:1px solid #d9d9d9;padding:4px 8px;">${cell}</td>`).join('')
+    const cells = row.map((cell: string) => `<td style="border:1px solid #d9d9d9;padding:4px 8px;">${escapeHtml(cell)}</td>`).join('')
     return `<tr>${cells}</tr>`
   }).join('')
 
@@ -356,22 +357,13 @@ function renderComponent(ctx: RenderContext): string {
   return renderer(ctx)
 }
 
-function buildEventCode(events: Record<string, string>): string {
+function buildEventAttribute(events: Record<string, string>): string {
   const entries = Object.entries(events)
   if (entries.length === 0) return ''
 
-  // 只处理第一个事件
+  // 只处理第一个事件，使用 data 属性存储（避免内联 JS 注入）
   const [type, param] = entries[0]
-  const escapedParam = param ? param.replace(/'/g, "\\'") : ''
-
-  switch (type) {
-    case 'redirect':
-      return `window.open('${escapedParam}','_blank')`
-    case 'alert':
-      return `alert('${escapedParam}')`
-    default:
-      return `console.log('${type}: ${escapedParam}')`
-  }
+  return `data-event-type="${escapeHtml(type)}" data-event-param="${escapeHtml(param)}"`
 }
 
 // ==================== 主导出函数 ====================
@@ -390,7 +382,7 @@ export function exportToHtml({ title = '低代码页面', componentData, canvasS
   const rootComponents = componentData.filter(c => !c.parentId)
   const canvasWidth = canvasStyle.width || 1200
   const canvasHeight = canvasStyle.height || 740
-  const bgColor = canvasStyle.backgroundColor || '#fff'
+  const bgColor = isValidCssColor(canvasStyle.backgroundColor || '') ? canvasStyle.backgroundColor : '#fff'
 
   // 渲染所有根组件
   const componentsHtml = rootComponents
@@ -403,7 +395,7 @@ export function exportToHtml({ title = '低代码页面', componentData, canvasS
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>${title}</title>
+<title>${escapeHtml(title)}</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
@@ -436,6 +428,19 @@ document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('.animated').forEach(function(el) {
     var time = el.style.getPropertyValue('--animate-time') || '1s';
     el.style.animationDuration = time;
+  });
+
+  // 委托事件处理（安全方式，避免内联 JS 注入）
+  document.addEventListener('click', function(e) {
+    var el = e.target.closest('[data-event-type]');
+    if (!el) return;
+    var type = el.getAttribute('data-event-type');
+    var param = el.getAttribute('data-event-param');
+    if (type === 'redirect' && /^https?:\\/\\//.test(param)) {
+      window.open(param, '_blank', 'noopener,noreferrer');
+    } else if (type === 'alert') {
+      window.alert(param);
+    }
   });
 });
 <\/script>

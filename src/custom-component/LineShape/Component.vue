@@ -1,8 +1,9 @@
 <template>
-  <div class="line-shape"></div>
+  <div ref="lineRef" class="line-shape"></div>
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
 import { useOnEvent } from '../common/useOnEvent'
 import type { ComponentData, LinkageConfig } from '@/types'
 
@@ -12,8 +13,9 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+const lineRef = ref<HTMLElement | null>(null)
 
-useOnEvent(props)
+useOnEvent(props, lineRef)
 </script>
 
 <style lang="scss" scoped>

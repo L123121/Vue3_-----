@@ -94,6 +94,9 @@ export const ComponentDataSchema: z.ZodType<{
   icon: string
   propValue: string | z.infer<typeof PicturePropValueSchema> | z.infer<typeof TablePropValueSchema> | z.infer<typeof ChartPropValueSchema> | unknown[]
   style: z.infer<typeof ComponentStyleSchema>
+  parentId: string | null
+  slot: string
+  zIndex: number
   request?: z.infer<typeof RequestConfigSchema>
   animations: z.infer<typeof AnimationSchema>[]
   events: Record<string, string>
@@ -117,6 +120,9 @@ export const ComponentDataSchema: z.ZodType<{
       ])
       .default(''),
     style: ComponentStyleSchema,
+    parentId: z.string().nullable().default(null),
+    slot: z.string().default('default'),
+    zIndex: z.number().default(0),
     request: RequestConfigSchema.optional(),
     animations: z.array(AnimationSchema).default([]),
     events: z.record(z.string()).default({}),

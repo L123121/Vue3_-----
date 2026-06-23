@@ -54,7 +54,8 @@ const rootComponents = computed(() => {
  * 监听来自父窗口的 postMessage 数据
  */
 function handleMessage(event: MessageEvent): void {
-  // 安全校验：验证数据来源和格式
+  // 安全校验：验证 origin 和数据格式
+  if (event.origin !== window.location.origin) return
   if (!event.data || event.data.source !== 'editor-preview') return
 
   const { type, data } = event.data
@@ -67,7 +68,7 @@ function handleMessage(event: MessageEvent): void {
 }
 
 function closePreview(): void {
-  window.parent.postMessage({ source: 'preview-page', type: 'close' }, '*')
+  window.parent.postMessage({ source: 'preview-page', type: 'close' }, window.location.origin)
 }
 
 onMounted(() => {

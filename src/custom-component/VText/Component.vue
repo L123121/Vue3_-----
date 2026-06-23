@@ -18,13 +18,13 @@
       @mousedown="handleMousedown"
       @blur="handleBlur"
       @input="handleInput"
-      v-html="element.propValue"
+      v-html="sanitizeHtml(String(element.propValue))"
     ></div>
   </div>
   <div v-else class="v-text preview">
     <div
       :style="{ verticalAlign: element.style.verticalAlign, padding: element.style.padding + 'px' }"
-      v-html="element.propValue"
+      v-html="sanitizeHtml(String(element.propValue))"
     ></div>
   </div>
 </template>
@@ -33,10 +33,10 @@
 import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useStore } from '@/store'
 import { storeToRefs } from 'pinia'
-import { keycodes } from '@/utils/shortcutKey'
 import request from '@/utils/request'
 import eventBus from '@/utils/eventBus'
 import { useOnEvent } from '../common/useOnEvent'
+import { sanitizeHtml } from '@/utils/sanitize'
 import type { ComponentData, RequestConfig, LinkageConfig } from '@/types'
 
 interface Props {
@@ -57,9 +57,11 @@ const { editMode, curComponent } = storeToRefs(store)
 
 const textRef = ref<HTMLElement | null>(null)
 const canEdit = ref(false)
-const ctrlKey = 17
 const isCtrlDown = ref(false)
 let cancelRequest: (() => void) | null = null
+
+// 需要阻止冒泡的快捷键（与 shortcutKey.ts 中的映射一致）
+const shortcutKeys = new Set(['b', 'c', 'd', 'e', 'g', 'l', 'p', 's', 'u', 'v', 'x', 'y', 'z'])
 
 useOnEvent(props, textRef)
 
@@ -91,7 +93,7 @@ function onComponentClick(): void {
 
 function handleInput(e: Event): void {
   const target = e.target as HTMLElement
-  emit('input', props.element, target.innerHTML)
+  emit('input', props.element, sanitizeHtml(target.innerHTML))
 }
 
 function handleKeydown(e: KeyboardEvent): void {
@@ -99,12 +101,12 @@ function handleKeydown(e: KeyboardEvent): void {
   if (canEdit.value) {
     e.stopPropagation()
   }
-  if (e.keyCode === ctrlKey) {
+  const key = e.key.toLowerCase()
+  if (key === 'control' || key === 'meta') {
     isCtrlDown.value = true
-  } else if (isCtrlDown.value && canEdit.value && keycodes.includes(e.keyCode)) {
+  } else if (isCtrlDown.value && canEdit.value && shortcutKeys.has(key)) {
     e.stopPropagation()
-  } else if (e.keyCode === 46) {
-    // deleteKey
+  } else if (key === 'delete' || key === 'backspace') {
     e.stopPropagation()
   }
 }
@@ -114,7 +116,8 @@ function handleKeyup(e: KeyboardEvent): void {
   if (canEdit.value) {
     e.stopPropagation()
   }
-  if (e.keyCode === ctrlKey) {
+  const key = e.key.toLowerCase()
+  if (key === 'control' || key === 'meta') {
     isCtrlDown.value = false
   }
 }
@@ -134,12 +137,12 @@ function clearStyle(e: ClipboardEvent): void {
   }
 
   const target = e.target as HTMLElement
-  emit('input', props.element, target.innerHTML)
+  emit('input', props.element, sanitizeHtml(target.innerHTML))
 }
 
 function handleBlur(e: Event): void {
   const target = e.target as HTMLElement
-  const html = target.innerHTML
+  const html = sanitizeHtml(target.innerHTML)
   if (html !== '') {
     props.element.propValue = html
   } else {

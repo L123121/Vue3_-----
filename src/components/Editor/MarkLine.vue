@@ -12,8 +12,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, onUnmounted } from 'vue'
-import eventBus from '@/utils/eventBus'
+import { ref, reactive, watch, onMounted, onUnmounted } from 'vue'
+import { useEditorContext } from '@/composables/useEditorContext'
 import { useStore } from '@/store'
 import { storeToRefs } from 'pinia'
 import { getComponentRotatedStyle } from '@/utils/style'
@@ -46,28 +46,22 @@ interface Condition {
   lineShift: number
 }
 
-// 命名函数用于正确移除监听器
 // 使用节流优化吸附检测，限制为 ~60fps
 const throttledShowLine = throttle(showLine, 16)
 
-const handleMove = (isDownward: boolean, isRightward: boolean): void => {
-  throttledShowLine(isDownward, isRightward)
-}
+// 通过 editorContext 监听移动状态（替代 eventBus）
+const { moveState } = useEditorContext()
 
-const handleUnmove = (): void => {
-  hideLine()
-}
-
-onMounted(() => {
-  // 监听元素移动和不移动的事件
-  eventBus.on('move', handleMove)
-  eventBus.on('unmove', handleUnmove)
-})
-
-onUnmounted(() => {
-  eventBus.off('move', handleMove)
-  eventBus.off('unmove', handleUnmove)
-})
+watch(
+  () => moveState.isMoving,
+  (isMoving) => {
+    if (isMoving) {
+      throttledShowLine(moveState.isDownward, moveState.isRightward)
+    } else {
+      hideLine()
+    }
+  }
+)
 
 function hideLine(): void {
   Object.keys(lineStatus).forEach(line => {

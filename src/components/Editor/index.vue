@@ -14,52 +14,13 @@
     <!-- 网格线 -->
     <Grid :is-dark-mode="isDarkMode" />
 
-    <!--页面组件列表展示-->
-    <Shape
-      v-for="(item, index) in visibleComponents"
+    <!--页面组件列表展示（递归渲染，支持 parentId 嵌套）-->
+    <NodeRenderer
+      v-for="item in visibleComponents"
       :key="item.id"
-      v-memo="[item.id === curComponent?.id, item.style, item.isLock]"
-      :default-style="item.style"
-      :style="getShapeStyle(item.style)"
-      :active="item.id === curComponent?.id"
-      :element="item"
-      :index="getComponentIndex(item)"
-      :class="{ lock: item.isLock }"
-    >
-      <component
-        :is="item.component"
-        v-if="item.component.startsWith('SVG')"
-        :id="'component' + item.id"
-        :style="getSVGStyle(item.style)"
-        class="component"
-        :prop-value="item.propValue"
-        :element="item"
-        :request="item.request"
-      />
-
-      <component
-        :is="item.component"
-        v-else-if="item.component !== 'VText'"
-        :id="'component' + item.id"
-        class="component"
-        :style="getComponentStyle(item.style)"
-        :prop-value="item.propValue"
-        :element="item"
-        :request="item.request"
-      />
-
-      <component
-        :is="item.component"
-        v-else
-        :id="'component' + item.id"
-        class="component"
-        :style="getComponentStyle(item.style)"
-        :prop-value="item.propValue"
-        :element="item"
-        :request="item.request"
-        @input="handleInput"
-      />
-    </Shape>
+      :node="item"
+      :index="componentIndexMap.get(item.id) ?? 0"
+    />
     <!-- 右击菜单 -->
     <ContextMenu />
     <!-- 标线 -->
@@ -73,23 +34,21 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useStore } from '@/store'
 import { storeToRefs } from 'pinia'
-import Shape from './Shape.vue'
 import ContextMenu from './ContextMenu.vue'
 import MarkLine from './MarkLine.vue'
 import Area from './Area.vue'
 import Grid from './Grid.vue'
+import NodeRenderer from './NodeRenderer.vue'
 import eventBus from '@/utils/eventBus'
+import { provideEditorContext } from '@/composables/useEditorContext'
 import {
-  getStyle,
   getComponentRotatedStyle,
-  getShapeStyle as getShapeStyleUtils,
-  getSVGStyle as getSVGStyleUtils,
-  getCanvasStyle as getCanvasStyleUtils,
+  getCanvasStyle,
 } from '@/utils/style'
 import { $, isPreventDrop } from '@/utils/utils'
-import { changeStyleWithScale as changeStyleWithScaleUtils } from '@/utils/translate'
+import { changeStyleWithScale } from '@/utils/translate'
 import { isInViewport } from '@/utils/performance'
-import type { ComponentData, ComponentStyle } from '@/types'
+import type { ComponentData } from '@/types'
 
 interface Props {
   isEdit?: boolean
@@ -102,26 +61,31 @@ const props = withDefaults(defineProps<Props>(), {
 const store = useStore()
 const { componentData, curComponent, canvasStyleData, editor, isDarkMode } = storeToRefs(store)
 
+// 提供编辑器上下文给子组件（Shape、MarkLine、Area）
+const editorContext = provideEditorContext()
+
 const editorX = ref(0)
 const editorY = ref(0)
 const start = ref({ x: 0, y: 0 })
 const width = ref(0)
 const height = ref(0)
 const isShowArea = ref(false)
-const svgFilterAttrs = ['width', 'height', 'top', 'left', 'rotate']
 
-// 视口裁剪：只渲染可视区域内的组件
+// 视口裁剪：只渲染根级组件（无 parentId），子组件由 NodeRenderer 递归渲染
 const visibleComponents = computed(() => {
-  // 如果组件数量较少，直接返回所有组件
-  if (componentData.value.length < 20) {
-    return componentData.value
+  // 筛选出根级组件（parentId 为空）
+  const rootComponents = componentData.value.filter(c => !c.parentId)
+
+  // 如果组件数量较少，直接返回所有根组件
+  if (rootComponents.length < 20) {
+    return rootComponents
   }
 
   // 获取画布尺寸和滚动位置
   const viewportWidth = editor.value?.clientWidth ?? 1920
   const viewportHeight = editor.value?.clientHeight ?? 1080
 
-  return componentData.value.filter(item => {
+  return rootComponents.filter(item => {
     const { top, left, width: w, height: h } = item.style
     return isInViewport(
       { top: top ?? 0, left: left ?? 0, width: w, height: h },
@@ -130,33 +94,25 @@ const visibleComponents = computed(() => {
   })
 })
 
-// 获取组件在原始数组中的索引
-function getComponentIndex(item: ComponentData): number {
-  return componentData.value.findIndex(c => c.id === item.id)
-}
+// 组件 id → 原始数组索引的映射（O(1) 查找）
+const componentIndexMap = computed(() => {
+  const map = new Map<string, number>()
+  componentData.value.forEach((c, i) => map.set(c.id, i))
+  return map
+})
 
 onMounted(() => {
   // 获取编辑器元素
   store.getEditor()
 
+  // 注册 hideArea 回调（editorContext 用于内部触发，eventBus 用于 store 触发）
+  editorContext.onHideArea(hideArea)
   eventBus.on('hideArea', hideArea)
 })
 
 onUnmounted(() => {
   eventBus.off('hideArea', hideArea)
 })
-
-function getShapeStyle(style: ComponentStyle): Record<string, string | number> {
-  return getShapeStyleUtils(style)
-}
-
-function getCanvasStyle(style: typeof canvasStyleData.value): Record<string, string | number> {
-  return getCanvasStyleUtils(style)
-}
-
-function changeStyleWithScale(value: number): number {
-  return changeStyleWithScaleUtils(value)
-}
 
 function handleMouseDown(e: MouseEvent): void {
   // 如果没有选中组件 在画布上点击时需要调用 e.preventDefault() 防止触发 drop 事件
@@ -328,30 +284,6 @@ function handleContextMenu(e: MouseEvent): void {
   }
 
   store.showContextMenu({ top, left })
-}
-
-function getComponentStyle(style: ComponentStyle): Record<string, string | number> {
-  return getStyle(style, svgFilterAttrs as (keyof ComponentStyle)[])
-}
-
-function getSVGStyle(style: ComponentStyle): Record<string, string | number> {
-  return getSVGStyleUtils(style, svgFilterAttrs as (keyof ComponentStyle)[])
-}
-
-function handleInput(element: ComponentData, value: string): void {
-  // 根据文本组件高度调整 shape 高度
-  store.setShapeStyle({ height: getTextareaHeight(element, value) })
-}
-
-function getTextareaHeight(element: ComponentData, text: string): number {
-  let { lineHeight, fontSize, height } = element.style
-  if (lineHeight === '' || lineHeight === undefined) {
-    lineHeight = 1.5
-  }
-
-  const newHeight =
-    (text.split('<br>').length - 1) * (lineHeight as number) * (fontSize || canvasStyleData.value.fontSize)
-  return height > newHeight ? height : newHeight
 }
 </script>
 

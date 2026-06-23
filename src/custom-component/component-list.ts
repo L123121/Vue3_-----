@@ -16,6 +16,9 @@ export const commonAttr = {
   events: {} as Record<string, string>,
   groupStyle: {} as Record<string, unknown>,
   isLock: false,
+  parentId: null as string | null,
+  slot: 'default',
+  zIndex: 0,
   collapseName: 'style',
   linkage: {
     duration: 0,

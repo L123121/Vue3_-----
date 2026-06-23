@@ -1,26 +1,6 @@
 import { useStore } from '@/store'
 import eventBus from '@/utils/eventBus'
 
-// 键盘按键码
-const ctrlKey = 17
-const commandKey = 91 // mac command
-const vKey = 86 // 粘贴
-const cKey = 67 // 复制
-const xKey = 88 // 剪切
-const yKey = 89 // 重做
-const zKey = 90 // 撤销
-const gKey = 71 // 组合
-const bKey = 66 // 拆分
-const lKey = 76 // 锁定
-const uKey = 85 // 解锁
-const sKey = 83 // 保存
-const pKey = 80 // 预览
-const dKey = 68 // 删除
-const deleteKey = 46 // 删除
-const eKey = 69 // 清空画布
-
-export const keycodes = [66, 67, 68, 69, 71, 76, 80, 83, 85, 86, 88, 89, 90]
-
 // 操作函数
 function copy(): void {
   const store = useStore()
@@ -92,34 +72,34 @@ function unlock(): void {
 }
 
 // 快捷键映射类型
-type KeyMap = Record<number, () => void>
+type KeyHandler = () => void
+type KeyMap = Record<string, KeyHandler>
 
 // 与组件状态无关的操作
 const basemap: KeyMap = {
-  [vKey]: paste,
-  [yKey]: redo,
-  [zKey]: undo,
-  [sKey]: save,
-  [pKey]: preview,
-  [eKey]: clearCanvas,
+  'v': paste,
+  'y': redo,
+  'z': undo,
+  's': save,
+  'p': preview,
+  'e': clearCanvas,
 }
 
 // 组件锁定状态下可以执行的操作
 const lockMap: KeyMap = {
   ...basemap,
-  [uKey]: unlock,
+  'u': unlock,
 }
 
 // 组件未锁定状态下可以执行的操作
 const unlockMap: KeyMap = {
   ...basemap,
-  [cKey]: copy,
-  [xKey]: cut,
-  [gKey]: compose,
-  [bKey]: decompose,
-  [dKey]: deleteComponent,
-  [deleteKey]: deleteComponent,
-  [lKey]: lock,
+  'c': copy,
+  'x': cut,
+  'g': compose,
+  'b': decompose,
+  'd': deleteComponent,
+  'l': lock,
 }
 
 let isCtrlOrCommandDown = false
@@ -134,25 +114,28 @@ export function listenGlobalKeyDown(): () => void {
     if (!store.isInEditor) return
 
     const { curComponent } = store
-    const { keyCode } = e
+    const key = e.key.toLowerCase()
 
-    if (keyCode === ctrlKey || keyCode === commandKey) {
+    if (key === 'control' || key === 'meta') {
       isCtrlOrCommandDown = true
-    } else if (keyCode === deleteKey && curComponent) {
-      store.deleteComponentWithCommand()
+    } else if (key === 'delete' || key === 'backspace') {
+      if (curComponent) {
+        store.deleteComponentWithCommand()
+      }
     } else if (isCtrlOrCommandDown) {
-      if (unlockMap[keyCode] && (!curComponent || !curComponent.isLock)) {
+      if (unlockMap[key] && (!curComponent || !curComponent.isLock)) {
         e.preventDefault()
-        unlockMap[keyCode]()
-      } else if (lockMap[keyCode] && curComponent && curComponent.isLock) {
+        unlockMap[key]()
+      } else if (lockMap[key] && curComponent && curComponent.isLock) {
         e.preventDefault()
-        lockMap[keyCode]()
+        lockMap[key]()
       }
     }
   }
 
   const handleKeyUp = (e: KeyboardEvent): void => {
-    if (e.keyCode === ctrlKey || e.keyCode === commandKey) {
+    const key = e.key.toLowerCase()
+    if (key === 'control' || key === 'meta') {
       isCtrlOrCommandDown = false
     }
   }
@@ -172,4 +155,3 @@ export function listenGlobalKeyDown(): () => void {
     window.removeEventListener('mousedown', handleMouseDown)
   }
 }
-

@@ -49,8 +49,8 @@ export function useDragDrop(): {
     const rectInfo = editor.value!.getBoundingClientRect()
     if (index) {
       const component = deepCopy(componentList[parseInt(index)])
-      const dropX = e.clientY - rectInfo.y
-      const dropY = e.clientX - rectInfo.x
+      const dropX = e.clientX - rectInfo.x
+      const dropY = e.clientY - rectInfo.y
 
       // ==================== 容器检测 ====================
       // 检测拖放位置是否在某个容器组件内
@@ -58,14 +58,14 @@ export function useDragDrop(): {
 
       if (container) {
         // 拖入容器：坐标相对于容器，设置 parentId
-        component.style.top = dropX - (container.style.top ?? 0)
-        component.style.left = dropY - (container.style.left ?? 0)
+        component.style.top = dropY - (container.style.top ?? 0)
+        component.style.left = dropX - (container.style.left ?? 0)
         component.parentId = container.id
         ElMessage.success(`已放入 ${container.label} 容器`)
       } else {
         // 拖入画布空白区域：根级组件
-        component.style.top = dropX
-        component.style.left = dropY
+        component.style.top = dropY
+        component.style.left = dropX
         component.parentId = null
       }
 

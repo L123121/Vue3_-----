@@ -91,6 +91,12 @@ export interface ComponentData {
   icon: string
   propValue: PropValue
   style: ComponentStyle
+  /** 父组件 ID，null 或 undefined 表示根级组件 */
+  parentId: string | null
+  /** 插入的插槽名称（用于多插槽容器） */
+  slot: string
+  /** 视觉层级，值越大越靠上。由 store 的图层操作自动管理，非手动编辑 */
+  zIndex: number
   request?: RequestConfig
   animations: Animation[]
   events: Record<string, string>
@@ -147,12 +153,14 @@ export interface StoreState {
   isInEditor: boolean
   areaData: AreaData
   versions: PageVersion[]
+  /** 数据版本号，每次 componentData 变更时递增，用于自动保存的脏标记 */
+  dataVersion: number
 }
 
 // ==================== Store Actions Payloads ====================
 export interface SetCurComponentPayload {
-  component: ComponentData
-  index: number
+  component: ComponentData | null
+  index: number | null
 }
 
 export interface SetShapeStylePayload {
@@ -199,12 +207,15 @@ export const commonStyle: Pick<ComponentStyle, 'rotate' | 'opacity'> = {
   opacity: 1,
 }
 
-export const commonAttr: Pick<ComponentData, 'animations' | 'events' | 'groupStyle' | 'isLock' | 'collapseName' | 'linkage'> = {
+export const commonAttr: Pick<ComponentData, 'animations' | 'events' | 'groupStyle' | 'isLock' | 'collapseName' | 'linkage' | 'parentId' | 'slot' | 'zIndex'> = {
   animations: [],
   events: {},
   groupStyle: {},
   isLock: false,
   collapseName: 'style',
+  parentId: null,
+  slot: 'default',
+  zIndex: 0,
   linkage: {
     duration: 0,
     data: [

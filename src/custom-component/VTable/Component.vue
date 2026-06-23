@@ -1,5 +1,5 @@
 <template>
-  <table class="v-table">
+  <table ref="tableRef" class="v-table">
     <tbody>
       <tr
         v-for="(item, index) in propValue.data"
@@ -16,7 +16,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onBeforeUnmount } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import request from '@/utils/request'
 import { useOnEvent } from '../common/useOnEvent'
 import type { ComponentData, TablePropValue, RequestConfig, LinkageConfig } from '@/types'
@@ -29,10 +29,11 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+const tableRef = ref<HTMLElement | null>(null)
 
 let cancelRequest: (() => void) | null = null
 
-useOnEvent(props)
+useOnEvent(props, tableRef)
 
 onMounted(() => {
   if (props.request) {

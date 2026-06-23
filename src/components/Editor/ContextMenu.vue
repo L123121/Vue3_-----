@@ -87,9 +87,9 @@ function bottomComponent(): void {
   z-index: 1000;
 
   ul {
-    border: 1px solid #e4e7ed;
+    border: 1px solid var(--border-color, #e4e7ed);
     border-radius: 4px;
-    background-color: #fff;
+    background-color: var(--panel-bg, #fff);
     box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
     box-sizing: border-box;
     margin: 0;
@@ -102,14 +102,14 @@ function bottomComponent(): void {
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      color: #606266;
+      color: var(--text-color, #606266);
       height: 34px;
       line-height: 34px;
       box-sizing: border-box;
       cursor: pointer;
 
       &:hover {
-        background-color: #f5f7fa;
+        background-color: var(--button-active-bg-color, #f5f7fa);
       }
     }
   }

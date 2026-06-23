@@ -29,8 +29,9 @@ import { useStore } from '@/store'
 import { storeToRefs } from 'pinia'
 import { RefreshRight, Lock } from '@element-plus/icons-vue'
 import eventBus from '@/utils/eventBus'
+import { useEditorContext } from '@/composables/useEditorContext'
 import runAnimation from '@/utils/runAnimation'
-import calculateComponentPositionAndSize from '@/utils/calculateComponentPositonAndSize'
+import calculateComponentPositionAndSize from '@/utils/calculateComponentPositionAndSize'
 import { mod360 } from '@/utils/translate'
 import { isPreventDrop } from '@/utils/utils'
 import { createRAFThrottle } from '@/utils/performance'
@@ -86,19 +87,16 @@ const angleToCursor: AngleCursor[] = [
   { start: 293, end: 338, cursor: 'w' },
 ]
 const cursors = ref<Record<string, string>>({})
+const editorCtx = useEditorContext()
 
 onMounted(() => {
   // 用于 Group 组件
   if (curComponent.value) {
     cursors.value = getCursor() // 根据旋转角度获取光标位置
   }
-  eventBus.on('runAnimation', handleRunAnimation)
-  eventBus.on('stopAnimation', handleStopAnimation)
-})
-
-onUnmounted(() => {
-  eventBus.off('runAnimation', handleRunAnimation)
-  eventBus.off('stopAnimation', handleStopAnimation)
+  // 通过 editorContext 注册动画回调（替代 eventBus）
+  editorCtx.onRunAnimation(handleRunAnimation)
+  editorCtx.onStopAnimation(handleStopAnimation)
 })
 
 function handleRunAnimation(): void {
@@ -262,11 +260,11 @@ function handleMouseDownOnShape(e: MouseEvent): void {
   cursors.value = getCursor() // 根据旋转角度获取光标位置
 
   const pos = { ...props.defaultStyle }
-  const startY = e.clientY
-  const startX = e.clientX
+  let startY = e.clientY
+  let startX = e.clientX
   // 如果直接修改属性，值的类型会变为字符串，所以要转为数值型
-  const startTop = Number(pos.top ?? 0)
-  const startLeft = Number(pos.left ?? 0)
+  let startTop = Number(pos.top ?? 0)
+  let startLeft = Number(pos.left ?? 0)
 
   // 记录起始位置（用于命令）
   const oldStyle = { top: startTop, left: startLeft }
@@ -279,36 +277,56 @@ function handleMouseDownOnShape(e: MouseEvent): void {
   // 如果元素没有移动，则不保存快照
   let hasMove = false
 
-  // 使用 RAF 批处理优化拖拽更新
-  const throttledSetShapeStyle = createRAFThrottle((style: ComponentStyle) => {
-    store.setShapeStyle(style)
+  // RAF 节流：将当前位移提交到 store 并重设基线，让 transform 始终保持微量偏移
+  const throttledMove = createRAFThrottle((curX: number, curY: number) => {
+    const newTop = startTop + (curY - startY)
+    const newLeft = startLeft + (curX - startX)
+    pos.top = newTop
+    pos.left = newLeft
+    newStyle = { top: newTop, left: newLeft }
+
+    // 1) 提交到 store，触发标线读取正确位置
+    store.setShapeStyle({ top: newTop, left: newLeft })
+    editorCtx.startMove(curY - startY > 0, curX - startX > 0)
+
+    // 2) 重设基线，下一帧的 transform 只计算增量偏移
+    startY = curY
+    startX = curX
+    startTop = newTop
+    startLeft = newLeft
+
+    // 3) 清除 transform（store 中的 top/left 已反映正确位置）
+    if (shapeRef.value) {
+      shapeRef.value.style.transform = ''
+    }
   })
 
   const move = (moveEvent: MouseEvent): void => {
     hasMove = true
     const curX = moveEvent.clientX
     const curY = moveEvent.clientY
-    pos.top = curY - startY + startTop
-    pos.left = curX - startX + startLeft
-    newStyle = { top: pos.top as number, left: pos.left as number }
+    const deltaX = curX - startX
+    const deltaY = curY - startY
 
-    // 使用 RAF 批处理更新样式
-    throttledSetShapeStyle(pos)
-    // 等更新完当前组件的样式并绘制到屏幕后再判断是否需要吸附
-    // 如果不使用 $nextTick，吸附后将无法移动
-    nextTick(() => {
-      // 触发元素移动事件，用于显示标线、吸附功能
-      // 后面两个参数代表鼠标移动方向
-      // curY - startY > 0 true 表示向下移动 false 表示向上移动
-      // curX - startX > 0 true 表示向右移动 false 表示向左移动
-      eventBus.emit('move', curY - startY > 0, curX - startX > 0)
-    })
+    // 直接 DOM 操作：微量 transform，每帧 RAF 提交后会归零
+    if (shapeRef.value) {
+      shapeRef.value.style.transform = `translate(${deltaX}px, ${deltaY}px)`
+    }
+
+    throttledMove(curX, curY)
   }
 
   const up = (): void => {
-    if (hasMove) store.moveComponent(props.element.id, oldStyle, newStyle)
-    // 触发元素停止移动事件，用于隐藏标线
-    eventBus.emit('unmove')
+    if (shapeRef.value) {
+      shapeRef.value.style.transform = ''
+    }
+
+    if (hasMove) {
+      store.setShapeStyle(pos)
+      store.moveComponent(props.element.id, oldStyle, newStyle)
+    }
+
+    editorCtx.stopMove()
     document.removeEventListener('mousemove', move)
     document.removeEventListener('mouseup', up)
     document.removeEventListener('selectstart', preventSelect)
@@ -325,7 +343,7 @@ function selectCurComponent(e: MouseEvent): void {
   store.hideContextMenu()
   // 打开右侧组件列表
   if (!store.rightList) {
-    store.isShowRightList()
+    store.toggleRightList()
   }
 }
 

@@ -73,7 +73,7 @@
 | 实时预览 | 编辑即所见，支持预览模式查看最终效果 |
 | 自动吸附 | 组件靠近时自动对齐，提升排版效率 |
 | 标线对齐 | 智能显示对齐辅助线，精确布局 |
-| 撤销重做 | 支持最多 50 步历史记录，操作无忧 |
+| 撤销重做 | 命令模式双栈，支持命令合并，最多 50 步历史记录 |
 | 暗黑模式 | 支持明暗主题切换，保护眼睛 |
 
 ### 组件库
@@ -114,7 +114,7 @@
 | **组件联动** | 组件间数据联动，一个组件触发另一个组件样式变化 |
 | **数据请求** | 支持配置 API 请求，动态获取组件数据，支持定时刷新 |
 | **右键菜单** | 提供快捷操作入口：复制、粘贴、删除、锁定、组合等 |
-| **JSON 导出** | 一键导出页面 JSON 数据，方便存储和迁移 |
+| **JSON 导入导出** | 一键导出页面 JSON 数据，导入时通过 Zod 运行时校验数据格式 |
 | **版本管理** | 保存页面历史版本，支持版本恢复和删除 |
 
 ---
@@ -125,7 +125,7 @@
 
 这是本系统的核心设计思想：**页面不是 DOM，而是一棵 JSON 树**。
 
-采用 JSON Schema 描述页面结构与组件树，通过 TypeScript 接口与枚举约束组件属性与交互行为，保障系统的类型安全与可扩展性。
+采用**扁平数组 + parentId 的数据结构**描述页面与组件关系，通过 TypeScript 接口与枚举约束组件属性与交互行为，保障系统的类型安全与可扩展性。
 
 ```typescript
 // 页面数据结构示例
@@ -165,38 +165,49 @@
 
 ### 2. 命令模式与撤销重做
 
-将用户操作抽象为命令对象并维护历史栈，完整支持组件新增、删除及属性变更等高频编辑场景。
+将用户操作抽象为命令对象，维护撤销/重做双栈，支持命令合并与批量操作。
 
 ```typescript
-// 快照管理核心逻辑
-class SnapshotManager {
-  private snapshotData: ComponentData[][] = []
-  private snapshotIndex = -1
-  private maxSnapshots = 50
+// CommandManager 核心逻辑
+class CommandManager {
+  private undoStack: Command[] = []
+  private redoStack: Command[] = []
+  private readonly config = { maxStackSize: 50, mergeTimeWindow: 300 }
 
-  recordSnapshot(data: ComponentData[]): void {
-    // 限制快照数量，防止内存溢出
-    if (this.snapshotData.length >= this.maxSnapshots) {
-      this.snapshotData.shift()
-      this.snapshotIndex--
+  execute(command: Command): void {
+    // 命令合并：300ms 内的同类操作自动合并
+    const lastCommand = this.undoStack[this.undoStack.length - 1]
+    if (this.shouldMerge(lastCommand, command)) {
+      const merged = lastCommand!.merge(command)
+      this.undoStack[this.undoStack.length - 1] = merged
+      merged.execute()
+      this.redoStack = []
+      return
     }
-    this.snapshotData[++this.snapshotIndex] = deepCopy(data)
+
+    command.execute()
+    this.undoStack.push(command)
+    this.redoStack = []
+
+    if (this.undoStack.length > this.config.maxStackSize) {
+      this.undoStack.shift()
+    }
   }
 
-  undo(): ComponentData[] | null {
-    if (this.snapshotIndex >= 0) {
-      this.snapshotIndex--
-      return deepCopy(this.snapshotData[this.snapshotIndex])
-    }
-    return null
+  undo(): boolean {
+    const command = this.undoStack.pop()
+    if (!command) return false
+    command.undo()
+    this.redoStack.push(command)
+    return true
   }
 
-  redo(): ComponentData[] | null {
-    if (this.snapshotIndex < this.snapshotData.length - 1) {
-      this.snapshotIndex++
-      return deepCopy(this.snapshotData[this.snapshotIndex])
-    }
-    return null
+  redo(): boolean {
+    const command = this.redoStack.pop()
+    if (!command) return false
+    command.redo()
+    this.undoStack.push(command)
+    return true
   }
 }
 ```
@@ -211,27 +222,33 @@ class SnapshotManager {
 
 ### 4. 拖拽系统实现
 
-核心思想：**把鼠标位移映射成组件坐标变化**
+核心思想：**把鼠标位移映射成组件坐标变化**，通过 RAF 节流 + DOM 直写实现高性能拖拽。
 
 ```typescript
-// 拖拽核心逻辑
-const handleMouseDown = (e: MouseEvent) => {
-  const startX = e.clientX
-  const startY = e.clientY
-  const { left, top } = component.style
+// Shape.vue 拖拽核心逻辑（简化版）
+function handleMouseDownOnShape(e: MouseEvent): void {
+  const pos = { ...props.defaultStyle }
+  let startY = e.clientY, startX = e.clientY
+  let startTop = pos.top, startLeft = pos.left
 
-  const handleMouseMove = (e: MouseEvent) => {
-    const deltaX = e.clientX - startX
-    const deltaY = e.clientY - startY
+  // RAF 节流：每帧只更新一次 store
+  const throttledMove = createRAFThrottle((curX, curY) => {
+    store.setShapeStyle({ top: startTop + (curY - startY), left: startLeft + (curX - startX) })
+    // 重设基线，下一帧只计算增量偏移
+    startY = curY; startX = curX
+    shapeRef.value.style.transform = ''
+  })
 
-    component.style.left = left + deltaX
-    component.style.top = top + deltaY
+  const move = (moveEvent: MouseEvent) => {
+    // 直接 DOM 操作：微量 transform，每帧 RAF 提交后归零
+    shapeRef.value.style.transform = `translate(${deltaX}px, ${deltaY}px)`
+    throttledMove(moveEvent.clientX, moveEvent.clientY)
   }
 
-  document.addEventListener('mousemove', handleMouseMove)
-  document.addEventListener('mouseup', () => {
-    document.removeEventListener('mousemove', handleMouseMove)
-  }, { once: true })
+  const up = () => {
+    // 鼠标释放 → 创建 MoveCommand 入栈（可撤销）
+    store.moveComponent(props.element.id, oldStyle, newStyle)
+  }
 }
 ```
 
@@ -240,6 +257,7 @@ const handleMouseDown = (e: MouseEvent) => {
 - 元素自动吸附对齐
 - 多选拖拽
 - 边界限制
+- 性能优化（RAF 节流、DOM 直写、命令合并）
 
 ### 5. 图层管理
 
@@ -258,8 +276,8 @@ const handleMouseDown = (e: MouseEvent) => {
 ### 7. 版本管理
 
 支持页面版本管理功能：
-- **保存版本**：保存当前页面快照，可添加版本名称和描述
-- **恢复版本**：一键恢复到历史版本
+- **保存版本**：深拷贝当前页面快照，可添加版本名称和描述
+- **恢复版本**：通过 ImportDataCommand 恢复（支持撤销）
 - **删除版本**：清理不需要的历史版本
 - **本地存储**：版本数据持久化到 localStorage
 
@@ -271,10 +289,11 @@ const handleMouseDown = (e: MouseEvent) => {
 | --- | --- | --- |
 | **Vue 3** | 3.2+ | 核心框架，使用 Composition API 开发，响应式渲染组件 |
 | **TypeScript** | 5.x | 类型约束，保障 JSON 数据结构的类型安全与可扩展性 |
-| **Pinia** | 2.x | 状态管理，管理画布数据、组件状态及快照恢复 |
+| **Pinia** | 2.x | 状态管理，管理画布数据、组件状态及命令历史 |
 | **Vue Router** | 4.x | 路由管理，支持多页面编辑切换 |
 | **Element Plus** | 2.x | UI 组件库，用于属性面板和侧边栏 |
 | **Vite** | 4.x | 构建工具，极速的热更新体验 |
+| **Zod** | 3.x | 运行时数据校验，校验导入的 JSON 数据结构 |
 | **ECharts** | 5.x | 数据可视化支持 |
 | **Animate.css** | - | 提供丰富的预置动画效果 |
 | **Ace Editor** | 1.x | 代码编辑器，用于 JSON 数据编辑 |
@@ -298,10 +317,12 @@ const handleMouseDown = (e: MouseEvent) => {
 
 | 能力 | 描述 |
 | --- | --- |
-| 数据抽象 | 把页面抽象成数据结构 (JSON Schema) |
-| 操作抽象 | 把用户操作抽象成命令对象 (Command Pattern) |
-| 数据驱动 | 用数据驱动可视化系统 (Reactive System) |
-| 编辑体验 | 实现接近所见即所得的编辑体验 (WYSIWYG) |
+| 数据抽象 | 把页面抽象为 JSON 数据结构（Zod Schema + TypeScript 接口） |
+| 操作抽象 | 把用户操作抽象为命令对象（Command Pattern + 命令合并） |
+| 数据驱动 | 用响应式数据驱动可视化系统（Pinia + Vue 3 Reactivity） |
+| 编辑体验 | 所见即所得编辑体验（RAF 节流 + DOM 直写 transform） |
+| 架构设计 | Composable 关注点分离 + provide/inject 类型安全通信 |
+| 数据校验 | 编译时 TypeScript + 运行时 Zod 双重保障 |
 
 ---
 
@@ -385,24 +406,51 @@ src/
 │   │   └── Linkage.vue      # 组件联动配置
 │   ├── component-list.ts    # 组件模板列表
 │   └── index.ts             # 组件注册入口
+├── composables/             # Composable 函数
+│   ├── useAutoSave.ts       # 自动保存（脏标记 + 防抖）
+│   ├── useDragDrop.ts       # 拖拽放置逻辑
+│   ├── usePanelToggle.ts    # 面板切换状态
+│   └── useEditorContext.ts  # 编辑器上下文（provide/inject）
 ├── store/                   # 状态管理
-│   └── index.ts             # Pinia Store（画布数据、快照、版本管理）
+│   └── index.ts             # Pinia Store（画布数据、命令历史、版本管理）
 ├── types/                   # TypeScript 类型定义
 │   └── index.ts             # 核心类型定义
+├── schemas/                 # Zod Schema 定义
+│   └── index.ts             # 运行时数据校验 Schema
+├── commands/                # 命令模式实现
+│   ├── CommandManager.ts    # 命令管理器（双栈 + 合并）
+│   ├── BaseCommand.ts       # 命令基类
+│   ├── MoveCommand.ts       # 移动命令（可合并）
+│   ├── ResizeCommand.ts     # 缩放命令（可合并）
+│   ├── RotateCommand.ts     # 旋转命令（可合并）
+│   ├── AddComponentCommand.ts
+│   ├── DeleteComponentCommand.ts
+│   ├── LayerCommand.ts
+│   ├── ComposeCommand.ts
+│   ├── DecomposeCommand.ts
+│   ├── PasteCommand.ts
+│   ├── CutCommand.ts
+│   ├── ClearCanvasCommand.ts
+│   ├── ImportDataCommand.ts
+│   ├── BatchCommand.ts
+│   ├── index.ts
+│   └── types.ts
 ├── utils/                   # 工具函数
-│   ├── utils.ts             # 通用工具函数
-│   ├── eventBus.ts          # 事件总线
+│   ├── utils.ts             # 通用工具函数（deepCopy、swap 等）
+│   ├── eventBus.ts          # 类型安全事件总线（EventMap 泛型）
 │   ├── generateID.ts        # ID 生成器
 │   ├── style.ts             # 样式计算
-│   ├── translate.ts         # 坐标转换
+│   ├── translate.ts         # 坐标转换（旋转矩阵、缩放比例）
+│   ├── calculateComponentPositionAndSize.ts # 八点缩放计算
+│   ├── changeComponentsSizeWithScale.ts # 画布缩放适配
+│   ├── performance.ts       # 性能工具（RAF 节流、视口裁剪）
+│   ├── validation.ts        # Zod 校验工具函数
 │   ├── request.ts           # 数据请求
-│   ├── shortcutKey.ts       # 快捷键处理
+│   ├── shortcutKey.ts       # 快捷键处理（使用 e.key）
 │   ├── animationClassData.ts # 动画数据
 │   ├── runAnimation.ts      # 动画执行
 │   ├── events.ts            # 事件处理
-│   ├── decomposeComponent.ts # 组件拆分
-│   ├── calculateComponentPositonAndSize.ts # 组件位置计算
-│   └── changeComponentsSizeWithScale.ts # 缩放适配
+│   └── decomposeComponent.ts # 组件拆分
 ├── styles/                  # 全局样式
 │   ├── global.scss          # 全局样式
 │   ├── dark.scss            # 暗黑模式
