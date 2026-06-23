@@ -523,9 +523,50 @@ function showVersionHistory(): void { isShowVersionHistory.value = true }
 }
 
 .dark.toolbar {
-    background: rgba(24, 24, 27, 0.9);
+    background: rgba(26, 26, 46, 0.95);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
+    border-bottom-color: #2a2a4a;
+
+    .btn-group {
+        .group-label {
+            color: #a0a0b0;
+        }
+
+        .el-button {
+            background-color: #252545;
+            border-color: #3a3a5a;
+            color: #e0e0e0;
+
+            &:hover {
+                background-color: #2e2e55;
+                border-color: #409eff;
+                color: #409eff;
+            }
+
+            &.is-disabled {
+                background-color: #1a1a35;
+                border-color: #2a2a4a;
+                color: #505070;
+            }
+        }
+    }
+
+    .canvas-config {
+        label {
+            color: #a0a0b0;
+        }
+
+        .canvas-input {
+            background: #1e1e3a;
+            border-color: #2a2a4a;
+            color: #e0e0e0;
+
+            &:focus {
+                border-color: #409eff;
+            }
+        }
+    }
 }
 
 .dialog-footer {

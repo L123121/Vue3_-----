@@ -1,53 +1,168 @@
 .home.dark,
 .dark ~ .el-color-picker__panel,
 .dark ~ .el-select-dropdown {
-    --main-bg-color: #2e2e2e;
-    --secondary-bg-color: #000;
-    --button-text-color: #fff;
-    --text-color: #fff;
-    --border-color: #161616b8;
-    --placeholder-text-color: #fff;
-    --placeholder-bg-color: #242424;
-    --actived-text-color: #fff;
-    --actived-bg-color: #409eff;
-    --ace-bg-color: #000;
-    --disable-text-color: #c0c4cc;
-    --disable-border-color: #4b4a4ad9;
-    --dropdown-border-color: #000000d9;
+    // ==================== 主色调变量 ====================
+    --main-bg-color: #1a1a2e;
+    --secondary-bg-color: #16213e;
+    --panel-bg: #1a1a2e;
+    --primary-color: #409eff;
+    --actived-text-color: #409eff;
+    --actived-bg-color: rgba(64, 158, 255, 0.15);
 
+    // ==================== 文字颜色 ====================
+    --text-color: #e0e0e0;
+    --secondary-text-color: #a0a0b0;
+    --button-text-color: #e0e0e0;
+    --placeholder-text-color: #808090;
+
+    // ==================== 背景颜色 ====================
+    --button-active-bg-color: rgba(64, 158, 255, 0.12);
+    --placeholder-bg-color: #1e1e3a;
+    --ace-bg-color: #0f0f1a;
+
+    // ==================== 边框颜色 ====================
+    --border-color: #2a2a4a;
+    --toolbar-border-color: #2a2a4a;
+    --disable-border-color: #3a3a5a;
+    --dropdown-border-color: #2a2a4a;
+
+    // ==================== 其他颜色 ====================
+    --disable-text-color: #606080;
+
+    // ==================== Element Plus 组件适配 ====================
     .right .el-tabs__item.is-top.is-active {
-        color: #409eff;
+        color: var(--primary-color);
     }
 
     .el-scrollbar,
     .el-select-dropdown__wrap.el-scrollbar__wrap,
     .el-select-dropdown__empty {
-        background-color: #1d1e1f;
+        background-color: #1e1e3a;
         color: var(--text-color);
 
         span,
         .el-select-dropdown__item {
-            color: #ddd;
+            color: #d0d0e0;
         }
 
         .el-select-dropdown__item.hover,
         .el-select-dropdown__item:hover {
-            background-color: #000;
-            color: var(--actived-bg-color);
+            background-color: rgba(64, 158, 255, 0.1);
+            color: var(--primary-color);
 
             span {
-                color: var(--actived-bg-color);
+                color: var(--primary-color);
             }
         }
     }
 
     .popper__arrow {
-        border-bottom-color: #1d1e1f;
-        border-top-color: #1d1e1f;
+        border-bottom-color: #1e1e3a;
+        border-top-color: #1e1e3a;
 
         &::after {
-            border-top-color: #1d1e1f;
-            border-bottom-color: #1d1e1f;
+            border-top-color: #1e1e3a;
+            border-bottom-color: #1e1e3a;
+        }
+    }
+
+    // ==================== 按钮样式修复 ====================
+    .el-button {
+        background-color: #252545;
+        border-color: #3a3a5a;
+        color: var(--text-color);
+
+        &:hover {
+            background-color: #2e2e55;
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        &.is-disabled {
+            background-color: #1a1a35;
+            border-color: #2a2a4a;
+            color: #505070;
+        }
+    }
+
+    // ==================== 输入框样式 ====================
+    .el-input__inner {
+        background-color: var(--placeholder-bg-color);
+        border-color: var(--border-color);
+        color: var(--text-color);
+
+        &::placeholder {
+            color: var(--placeholder-text-color);
+        }
+
+        &:focus {
+            border-color: var(--primary-color);
+        }
+    }
+
+    .el-textarea__inner {
+        background-color: var(--placeholder-bg-color);
+        border-color: var(--border-color);
+        color: var(--text-color);
+    }
+
+    // ==================== 折叠面板 ====================
+    .el-collapse-item__header,
+    .el-collapse-item__wrap {
+        background-color: var(--main-bg-color);
+        border-color: var(--border-color);
+        color: var(--text-color);
+    }
+
+    // ==================== Tabs 样式 ====================
+    .el-tabs__item {
+        color: var(--secondary-text-color);
+
+        &.is-active {
+            color: var(--primary-color);
+        }
+
+        &:hover {
+            color: var(--primary-color);
+        }
+    }
+
+    .el-tabs__nav-wrap::after {
+        background-color: var(--border-color);
+    }
+
+    // ==================== 表格样式 ====================
+    .el-table {
+        background-color: var(--main-bg-color);
+        color: var(--text-color);
+
+        th,
+        td {
+            background-color: var(--main-bg-color);
+            border-color: var(--border-color);
+        }
+
+        tr:hover > td {
+            background-color: rgba(64, 158, 255, 0.05);
+        }
+    }
+
+    // ==================== 滚动条样式 ====================
+    ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background-color: #3a3a5a;
+        border-radius: 3px;
+
+        &:hover {
+            background-color: #4a4a6a;
         }
     }
 }
