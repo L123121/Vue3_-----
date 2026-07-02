@@ -1,10 +1,11 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { CommandManager } from '@/commands/CommandManager'
+import { setCommandContext, getContext } from '@/commands/BaseCommand'
 import { MoveCommand } from '@/commands/MoveCommand'
 import { AddComponentCommand } from '@/commands/AddComponentCommand'
 import { useStore } from '@/store'
-import type { ComponentData } from '@/types'
+import type { ComponentData, ComponentStyle, CommandContext, CopyData } from '@/types'
 
 /** 构造一个最小可用组件 */
 function makeComponent(id: string, top = 0, left = 0): ComponentData {
@@ -27,9 +28,86 @@ function makeComponent(id: string, top = 0, left = 0): ComponentData {
     }
 }
 
+/**
+ * 创建测试用 CommandContext (直接操作 store, 不涉及 Yjs)
+ */
+function createTestContext(store: ReturnType<typeof useStore>): CommandContext {
+    return {
+        get(id) { return store.componentData.find(c => c.id === id) },
+        getAll() { return store.componentData },
+        indexOf(id) { return store.componentData.findIndex(c => c.id === id) },
+
+        setStyle(id, patch) {
+            const comp = store.componentData.find(c => c.id === id)
+            if (!comp) return
+            Object.assign(comp.style, patch)
+            store.markDataDirty()
+        },
+
+        setProp(id, patch) {
+            const comp = store.componentData.find(c => c.id === id)
+            if (!comp) return
+            Object.assign(comp, patch)
+            store.markDataDirty()
+        },
+
+        insert(item, index) {
+            if (index !== undefined && index >= 0 && index <= store.componentData.length) {
+                store.componentData.splice(index, 0, item)
+            } else {
+                store.componentData.push(item)
+            }
+            store.markDataDirty()
+        },
+
+        remove(id) {
+            const idx = store.componentData.findIndex(c => c.id === id)
+            if (idx === -1) return null
+            return this.removeAt(idx)
+        },
+
+        removeAt(index) {
+            if (index < 0 || index >= store.componentData.length) return null
+            const removed = store.componentData.splice(index, 1)[0] ?? null
+            store.markDataDirty()
+            return removed
+        },
+
+        moveIndex(from, to) {
+            if (from < 0 || from >= store.componentData.length) return
+            if (to < 0 || to >= store.componentData.length) return
+            const [item] = store.componentData.splice(from, 1)
+            store.componentData.splice(to, 0, item)
+            store.markDataDirty()
+        },
+
+        replaceAll(list) {
+            const backup = store.componentData.slice()
+            store.componentData.splice(0, store.componentData.length, ...list)
+            store.markDataDirty()
+            return backup
+        },
+
+        get curComponent() { return store.curComponent },
+        setCurComponent(id) {
+            if (id === null) { store.setCurComponent({ component: null, index: null }); return }
+            const idx = store.componentData.findIndex(c => c.id === id)
+            if (idx !== -1) store.setCurComponent({ component: store.componentData[idx], index: idx })
+        },
+
+        getCanvas() { return store.canvasStyleData },
+        setCanvas(patch) { Object.assign(store.canvasStyleData, patch); store.markDataDirty() },
+
+        get editorEl() { return store.editor },
+        get clipboard() { return store.copyData },
+        setClipboard(data: CopyData | null) { store.copyData = data },
+    }
+}
+
 describe('CommandManager - 撤销重做双栈', () => {
     beforeEach(() => {
         setActivePinia(createPinia())
+        setCommandContext(createTestContext(useStore()))
     })
 
     it('execute 后入栈，canUndo 为 true', () => {
@@ -100,6 +178,7 @@ describe('CommandManager - 撤销重做双栈', () => {
 describe('CommandManager - 命令合并', () => {
     beforeEach(() => {
         setActivePinia(createPinia())
+        setCommandContext(createTestContext(useStore()))
     })
 
     it('300ms 内同组件的 MoveCommand 合并为一条', () => {
@@ -135,6 +214,7 @@ describe('CommandManager - 命令合并', () => {
 describe('MoveCommand', () => {
     beforeEach(() => {
         setActivePinia(createPinia())
+        setCommandContext(createTestContext(useStore()))
     })
 
     it('execute 后组件位置更新', () => {
