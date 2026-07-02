@@ -10,19 +10,19 @@ export function usePanelToggle(): {
   leftList: ReturnType<typeof ref<boolean>>
   isShowLeft: () => void
   isShowRight: () => void
-} {
-  const store = useStore()
-  const { rightList } = storeToRefs(store)
+  } {
+    const store = useStore()
+    const { rightList } = storeToRefs(store)
 
-  const leftList = ref(true)
+    const leftList = ref(true)
 
-  function isShowLeft(): void {
-    leftList.value = !leftList.value
-  }
+    function isShowLeft(): void {
+        leftList.value = !leftList.value
+    }
 
-  function isShowRight(): void {
-    store.toggleRightList()
-  }
+    function isShowRight(): void {
+        store.toggleRightList()
+    }
 
-  return { leftList, isShowLeft, isShowRight }
+    return { leftList, isShowLeft, isShowRight }
 }

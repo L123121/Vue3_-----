@@ -1,17 +1,17 @@
 <template>
     <div v-if="modelValue" class="modal-bg" @click="hide">
         <div class="fadeInLeft animated modal" @click="stopPropagation">
-            <slot></slot>
+            <slot />
         </div>
     </div>
 </template>
 
 <script setup lang="ts">
 const props = defineProps({
-  modelValue: {
-    type: Boolean,
-    default: false,
-  }
+    modelValue: {
+        type: Boolean,
+        default: false,
+    },
 })
 
 const emit = defineEmits<{
@@ -19,11 +19,11 @@ const emit = defineEmits<{
 }>()
 
 function hide(): void {
-  emit('update:modelValue', false)
+    emit('update:modelValue', false)
 }
 
 function stopPropagation(e: Event): void {
-  e.stopPropagation()
+    e.stopPropagation()
 }
 </script>
 

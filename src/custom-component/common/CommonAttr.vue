@@ -4,14 +4,14 @@
             <el-collapse-item title="通用样式" name="style">
                 <el-form>
                     <el-form-item v-for="({ key, label }, index) in styleKeys" :key="index" :label="label">
-                        <el-color-picker v-if="isIncludesColor(key)" v-model="curComponent.style[key]" show-alpha></el-color-picker>
+                        <el-color-picker v-if="isIncludesColor(key)" v-model="curComponent.style[key]" show-alpha />
                         <el-select v-else-if="selectKey.includes(key)" v-model="curComponent.style[key]">
                             <el-option
                                 v-for="item in optionMap[key]"
                                 :key="item.value"
                                 :label="item.label"
                                 :value="item.value"
-                            ></el-option>
+                            />
                         </el-select>
                         <el-input 
                             v-else-if="key=='fontSize' && curComponent.component=='VText'"
@@ -27,8 +27,8 @@
                     </el-form-item>
                 </el-form>
             </el-collapse-item>
-            <Request v-if="curComponent.request"></Request>
-            <Linkage v-if="curComponent.linkage"></Linkage>
+            <Request v-if="curComponent.request" />
+            <Linkage v-if="curComponent.linkage" />
         </el-collapse>
     </div>
 </template>

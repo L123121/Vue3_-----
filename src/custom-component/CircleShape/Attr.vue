@@ -1,6 +1,6 @@
 <template>
     <div class="attr-list">
-        <CommonAttr></CommonAttr>
+        <CommonAttr />
         <el-form>
             <el-form-item label="内容">
                 <el-input v-model="curComponent.propValue" type="textarea" :rows="3" />

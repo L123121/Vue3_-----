@@ -1,8 +1,12 @@
 <template>
     <!-- 截图模式：使用直接渲染（需要真实 DOM 用于 html-to-image） -->
     <div v-if="isScreenshot" ref="container" class="bg">
-        <el-button class="close" type="primary" @click="htmlToImage">确定截图</el-button>
-        <el-button class="close close-cancel" @click="close">取消</el-button>
+        <el-button class="close" type="primary" @click="htmlToImage">
+            确定截图
+        </el-button>
+        <el-button class="close close-cancel" @click="close">
+            取消
+        </el-button>
         <div class="canvas-container">
             <div
                 class="canvas"
@@ -25,12 +29,16 @@
     <div v-else class="preview-overlay">
         <div class="preview-header">
             <span class="header-title">
-                <span class="dot"></span>
+                <span class="dot" />
                 iframe 隔离预览
             </span>
             <div class="header-actions">
-                <el-button size="small" @click="refreshPreview">刷新</el-button>
-                <el-button size="small" type="primary" @click="close">关闭预览</el-button>
+                <el-button size="small" @click="refreshPreview">
+                    刷新
+                </el-button>
+                <el-button size="small" type="primary" @click="close">
+                    关闭预览
+                </el-button>
             </div>
         </div>
         <div class="iframe-wrapper">
@@ -38,8 +46,8 @@
                 ref="iframeRef"
                 :src="previewUrl"
                 class="preview-iframe"
-                @load="handleIframeLoad"
                 title="页面预览"
+                @load="handleIframeLoad"
             />
         </div>
     </div>

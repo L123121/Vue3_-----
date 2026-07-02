@@ -2,8 +2,12 @@
     <div class="animation-list">
         <div class="div-animation">
             <el-button-group class="w-full mb-10">
-                <el-button type="primary" @click="isShowAnimation = true">添加动画</el-button>
-                <el-button @click="previewAnimate">预览动画</el-button>
+                <el-button type="primary" @click="isShowAnimation = true">
+                    添加动画
+                </el-button>
+                <el-button @click="previewAnimate">
+                    预览动画
+                </el-button>
             </el-button-group>
             
             <div class="animation-tags">
@@ -29,7 +33,9 @@
         <!-- 选择动画 -->
         <Modal v-model="isShowAnimation">
             <div class="animation-modal-content">
-                <h3 class="modal-title">动画列表</h3>
+                <h3 class="modal-title">
+                    动画列表
+                </h3>
                 <el-tabs v-model="animationActiveName" type="border-card">
                     <el-tab-pane
                         v-for="item in animationClassData"
@@ -90,28 +96,28 @@ const isShowAnimationSetting = ref(false)
 const curIndex = ref(0)
 
 function addAnimation(animate: AnimationItem): void {
-  store.addAnimation(animate)
-  isShowAnimation.value = false
+    store.addAnimation(animate)
+    isShowAnimation.value = false
 }
 
 function previewAnimate(): void {
-  eventBus.emit('runAnimation')
+    eventBus.emit('runAnimation')
 }
 
 function removeAnimation(index: number): void {
-  store.removeAnimation(index)
-  if (!curComponent.value.animations.length) { // 清空动画数据，停止运动
-    eventBus.emit('stopAnimation')
-  }
+    store.removeAnimation(index)
+    if (!curComponent.value.animations.length) { // 清空动画数据，停止运动
+        eventBus.emit('stopAnimation')
+    }
 }
 
 function handleAnimationSetting(index: number): void {
-  isShowAnimationSetting.value = true
-  curIndex.value = index
+    isShowAnimationSetting.value = true
+    curIndex.value = index
 }
 
 function runAnimationFn(animate: AnimationItem): void {
-  hoverPreviewAnimate.value = animate.value
+    hoverPreviewAnimate.value = animate.value
 }
 </script>
 

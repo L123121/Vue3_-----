@@ -1,5 +1,5 @@
 <template>
-  <div ref="lineRef" class="line-shape"></div>
+    <div ref="lineRef" class="line-shape" />
 </template>
 
 <script setup lang="ts">

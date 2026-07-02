@@ -1,13 +1,13 @@
 <template>
     <div class="attr-list v-talbe-attr">
-        <CommonAttr></CommonAttr>
-        <EditTable></EditTable>
+        <CommonAttr />
+        <EditTable />
         <el-form>
             <el-form-item label="斑马纹">
-                <el-switch v-model="propValue.stripe"></el-switch>
+                <el-switch v-model="propValue.stripe" />
             </el-form-item>
             <el-form-item label="表头加粗">
-                <el-switch v-model="propValue.thBold"></el-switch>
+                <el-switch v-model="propValue.thBold" />
             </el-form-item>
         </el-form>
     </div>

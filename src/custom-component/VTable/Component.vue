@@ -1,18 +1,20 @@
 <template>
-  <table ref="tableRef" class="v-table">
-    <tbody>
-      <tr
-        v-for="(item, index) in propValue.data"
-        :key="index"
-        :class="{
-          stripe: propValue.stripe && index % 2,
-          bold: propValue.thBold && index === 0,
-        }"
-      >
-        <td v-for="(e, i) in item" :key="i">{{ e }}</td>
-      </tr>
-    </tbody>
-  </table>
+    <table ref="tableRef" class="v-table">
+        <tbody>
+            <tr
+                v-for="(item, index) in propValue.data"
+                :key="index"
+                :class="{
+                    stripe: propValue.stripe && index % 2,
+                    bold: propValue.thBold && index === 0,
+                }"
+            >
+                <td v-for="(e, i) in item" :key="i">
+                    {{ e }}
+                </td>
+            </tr>
+        </tbody>
+    </table>
 </template>
 
 <script setup lang="ts">
@@ -36,19 +38,19 @@ let cancelRequest: (() => void) | null = null
 useOnEvent(props, tableRef)
 
 onMounted(() => {
-  if (props.request) {
-    cancelRequest = request(
-      props.request,
+    if (props.request) {
+        cancelRequest = request(
+            props.request,
       props.propValue as unknown as Record<string, unknown>,
-      'data'
-    )
-  }
+      'data',
+        )
+    }
 })
 
 onBeforeUnmount(() => {
-  if (props.request && cancelRequest) {
-    cancelRequest()
-  }
+    if (props.request && cancelRequest) {
+        cancelRequest()
+    }
 })
 </script>
 

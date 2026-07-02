@@ -1,30 +1,32 @@
 <template>
-  <div class="preview-page">
-    <div class="preview-toolbar">
-      <span class="preview-badge">预览模式 (iframe 隔离渲染)</span>
-      <button class="close-btn" @click="closePreview">关闭预览</button>
+    <div class="preview-page">
+        <div class="preview-toolbar">
+            <span class="preview-badge">预览模式 (iframe 隔离渲染)</span>
+            <button class="close-btn" @click="closePreview">
+                关闭预览
+            </button>
+        </div>
+        <div class="preview-container">
+            <div
+                v-if="componentData.length"
+                class="preview-canvas"
+                :style="{
+                    ...getCanvasStyle(canvasStyle),
+                    width: changeStyleWithScale(canvasStyle.width) + 'px',
+                    height: changeStyleWithScale(canvasStyle.height) + 'px',
+                }"
+            >
+                <PreviewNodeRenderer
+                    v-for="item in rootComponents"
+                    :key="item.id"
+                    :node="item"
+                />
+            </div>
+            <div v-else class="empty-hint">
+                等待接收数据...
+            </div>
+        </div>
     </div>
-    <div class="preview-container">
-      <div
-        v-if="componentData.length"
-        class="preview-canvas"
-        :style="{
-          ...getCanvasStyle(canvasStyle),
-          width: changeStyleWithScale(canvasStyle.width) + 'px',
-          height: changeStyleWithScale(canvasStyle.height) + 'px',
-        }"
-      >
-        <PreviewNodeRenderer
-          v-for="item in rootComponents"
-          :key="item.id"
-          :node="item"
-        />
-      </div>
-      <div v-else class="empty-hint">
-        等待接收数据...
-      </div>
-    </div>
-  </div>
 </template>
 
 <script setup lang="ts">
@@ -36,47 +38,47 @@ import type { ComponentData, CanvasStyleData } from '@/types'
 
 const componentData = ref<ComponentData[]>([])
 const canvasStyle = ref<CanvasStyleData>({
-  width: 1200,
-  height: 740,
-  scale: 100,
-  color: '#000',
-  opacity: 1,
-  backgroundColor: '#fff',
-  fontSize: 14,
+    width: 1200,
+    height: 740,
+    scale: 100,
+    color: '#000',
+    opacity: 1,
+    backgroundColor: '#fff',
+    fontSize: 14,
 })
 
 // 只渲染根级组件（子组件由容器组件内部渲染）
 const rootComponents = computed(() => {
-  return componentData.value.filter(c => !c.parentId)
+    return componentData.value.filter(c => !c.parentId)
 })
 
 /**
  * 监听来自父窗口的 postMessage 数据
  */
 function handleMessage(event: MessageEvent): void {
-  // 安全校验：验证 origin 和数据格式
-  if (event.origin !== window.location.origin) return
-  if (!event.data || event.data.source !== 'editor-preview') return
+    // 安全校验：验证 origin 和数据格式
+    if (event.origin !== window.location.origin) return
+    if (!event.data || event.data.source !== 'editor-preview') return
 
-  const { type, data } = event.data
+    const { type, data } = event.data
 
-  if (type === 'componentData' && Array.isArray(data)) {
-    componentData.value = data
-  } else if (type === 'canvasStyle' && data) {
-    canvasStyle.value = { ...canvasStyle.value, ...data }
-  }
+    if (type === 'componentData' && Array.isArray(data)) {
+        componentData.value = data
+    } else if (type === 'canvasStyle' && data) {
+        canvasStyle.value = { ...canvasStyle.value, ...data }
+    }
 }
 
 function closePreview(): void {
-  window.parent.postMessage({ source: 'preview-page', type: 'close' }, window.location.origin)
+    window.parent.postMessage({ source: 'preview-page', type: 'close' }, window.location.origin)
 }
 
 onMounted(() => {
-  window.addEventListener('message', handleMessage)
+    window.addEventListener('message', handleMessage)
 })
 
 onUnmounted(() => {
-  window.removeEventListener('message', handleMessage)
+    window.removeEventListener('message', handleMessage)
 })
 </script>
 

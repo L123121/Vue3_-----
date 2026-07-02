@@ -1,3 +1,4 @@
+/* eslint-disable no-useless-escape */
 /**
  * HTML 导出引擎
  *
@@ -69,178 +70,178 @@ interface RenderContext {
  * 将组件样式转换为内联 CSS 字符串
  */
 function styleToInline(style: Record<string, unknown>): string {
-  const styleMap: Record<string, string> = {
-    width: 'width',
-    height: 'height',
-    top: 'top',
-    left: 'left',
-    rotate: 'transform',
-    opacity: 'opacity',
-    fontSize: 'font-size',
-    fontWeight: 'font-weight',
-    lineHeight: 'line-height',
-    letterSpacing: 'letter-spacing',
-    textAlign: 'text-align',
-    color: 'color',
-    backgroundColor: 'background-color',
-    borderColor: 'border-color',
-    borderWidth: 'border-width',
-    borderStyle: 'border-style',
-    borderRadius: 'border-radius',
-    padding: 'padding',
-    verticalAlign: 'vertical-align',
-  }
-
-  const lines: string[] = []
-  let transformStr = ''
-
-  for (const [key, value] of Object.entries(style)) {
-    if (value === undefined || value === null || value === '') continue
-    const cssKey = styleMap[key]
-    if (!cssKey) continue
-
-    if (key === 'rotate') {
-      transformStr = `rotate(${value}deg)`
-      continue
+    const styleMap: Record<string, string> = {
+        width: 'width',
+        height: 'height',
+        top: 'top',
+        left: 'left',
+        rotate: 'transform',
+        opacity: 'opacity',
+        fontSize: 'font-size',
+        fontWeight: 'font-weight',
+        lineHeight: 'line-height',
+        letterSpacing: 'letter-spacing',
+        textAlign: 'text-align',
+        color: 'color',
+        backgroundColor: 'background-color',
+        borderColor: 'border-color',
+        borderWidth: 'border-width',
+        borderStyle: 'border-style',
+        borderRadius: 'border-radius',
+        padding: 'padding',
+        verticalAlign: 'vertical-align',
     }
 
-    const needsPx = ['width', 'height', 'top', 'left', 'fontSize', 'borderWidth', 'letterSpacing', 'borderRadius', 'padding'].includes(key)
-    // borderRadius can be a string like '50%', don't add px if it already has a unit
-    if (needsPx && key === 'borderRadius' && typeof value === 'string' && /%|px|em|rem/.test(value)) {
-      lines.push(`${cssKey}: ${value}`)
-    } else if (needsPx && typeof value === 'number') {
-      lines.push(`${cssKey}: ${value}px`)
-    } else {
-      lines.push(`${cssKey}: ${value}`)
+    const lines: string[] = []
+    let transformStr = ''
+
+    for (const [key, value] of Object.entries(style)) {
+        if (value === undefined || value === null || value === '') continue
+        const cssKey = styleMap[key]
+        if (!cssKey) continue
+
+        if (key === 'rotate') {
+            transformStr = `rotate(${value}deg)`
+            continue
+        }
+
+        const needsPx = ['width', 'height', 'top', 'left', 'fontSize', 'borderWidth', 'letterSpacing', 'borderRadius', 'padding'].includes(key)
+        // borderRadius can be a string like '50%', don't add px if it already has a unit
+        if (needsPx && key === 'borderRadius' && typeof value === 'string' && /%|px|em|rem/.test(value)) {
+            lines.push(`${cssKey}: ${value}`)
+        } else if (needsPx && typeof value === 'number') {
+            lines.push(`${cssKey}: ${value}px`)
+        } else {
+            lines.push(`${cssKey}: ${value}`)
+        }
     }
-  }
 
-  if (transformStr) {
-    lines.push(`transform: ${transformStr}`)
-  }
+    if (transformStr) {
+        lines.push(`transform: ${transformStr}`)
+    }
 
-  return lines.join('; ')
+    return lines.join('; ')
 }
 
 /**
  * 生成动画的 HTML 属性
  */
 function getAnimationAttributes(animations: Animation[]): string {
-  if (!animations || animations.length === 0) return ''
+    if (!animations || animations.length === 0) return ''
 
-  // 只取第一个动画用于进入效果
-  const enterAnim = animations.find(a => a.applyTo === 'enter' || !a.applyTo) || animations[0]
-  if (!enterAnim) return ''
+    // 只取第一个动画用于进入效果
+    const enterAnim = animations.find(a => a.applyTo === 'enter' || !a.applyTo) || animations[0]
+    if (!enterAnim) return ''
 
-  const classes = ['animated', enterAnim.type]
-  if (enterAnim.infinite) classes.push('infinite')
+    const classes = ['animated', enterAnim.type]
+    if (enterAnim.infinite) classes.push('infinite')
 
-  const style = `--animate-time: ${enterAnim.duration / 1000}s; animation-delay: ${enterAnim.delay}ms;`
-  return `class="${classes.join(' ')}" style="${style}"`
+    const style = `--animate-time: ${enterAnim.duration / 1000}s; animation-delay: ${enterAnim.delay}ms;`
+    return `class="${classes.join(' ')}" style="${style}"`
 }
 
 /**
  * 渲染文本组件（VText）
  */
 function renderVText(ctx: RenderContext): string {
-  const { component } = ctx
-  const text = component.propValue as string || ''
-  const style = styleToInline(component.style as unknown as Record<string, unknown>)
-  const animAttr = getAnimationAttributes(component.animations)
-  const escapedText = text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/\n/g, '<br>')
+    const { component } = ctx
+    const text = component.propValue as string || ''
+    const style = styleToInline(component.style as unknown as Record<string, unknown>)
+    const animAttr = getAnimationAttributes(component.animations)
+    const escapedText = text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\n/g, '<br>')
 
-  return `<div ${animAttr} style="position:absolute; ${style}">${escapedText}</div>`
+    return `<div ${animAttr} style="position:absolute; ${style}">${escapedText}</div>`
 }
 
 /**
  * 渲染按钮组件（VButton）
  */
 function renderVButton(ctx: RenderContext): string {
-  const { component } = ctx
-  const text = component.propValue as string || ''
-  const style = styleToInline(component.style as unknown as Record<string, unknown>)
-  const animAttr = getAnimationAttributes(component.animations)
-  const escapedText = escapeHtml(text)
-  const eventData = buildEventAttribute(component.events)
+    const { component } = ctx
+    const text = component.propValue as string || ''
+    const style = styleToInline(component.style as unknown as Record<string, unknown>)
+    const animAttr = getAnimationAttributes(component.animations)
+    const escapedText = escapeHtml(text)
+    const eventData = buildEventAttribute(component.events)
 
-  return `<div ${animAttr} style="position:absolute; display:flex; align-items:center; justify-content:center; ${style}; cursor:pointer" ${eventData}>${escapedText}</div>`
+    return `<div ${animAttr} style="position:absolute; display:flex; align-items:center; justify-content:center; ${style}; cursor:pointer" ${eventData}>${escapedText}</div>`
 }
 
 /**
  * 渲染图片组件（Picture）
  */
 function renderPicture(ctx: RenderContext): string {
-  const { component } = ctx
-  const propValue = component.propValue as { url?: string; flip?: { horizontal?: boolean; vertical?: boolean } } || {}
-  const style = styleToInline(component.style as unknown as Record<string, unknown>)
-  const imgUrl = propValue.url || ''
-  const safeUrl = isValidImageUrl(imgUrl) ? escapeHtml(imgUrl) : ''
-  const flipTransform = []
-  if (propValue.flip?.horizontal) flipTransform.push('scaleX(-1)')
-  if (propValue.flip?.vertical) flipTransform.push('scaleY(-1)')
-  const imgStyle = flipTransform.length ? `transform: ${flipTransform.join(' ')}` : ''
-  const animAttr = getAnimationAttributes(component.animations)
+    const { component } = ctx
+    const propValue = component.propValue as { url?: string; flip?: { horizontal?: boolean; vertical?: boolean } } || {}
+    const style = styleToInline(component.style as unknown as Record<string, unknown>)
+    const imgUrl = propValue.url || ''
+    const safeUrl = isValidImageUrl(imgUrl) ? escapeHtml(imgUrl) : ''
+    const flipTransform = []
+    if (propValue.flip?.horizontal) flipTransform.push('scaleX(-1)')
+    if (propValue.flip?.vertical) flipTransform.push('scaleY(-1)')
+    const imgStyle = flipTransform.length ? `transform: ${flipTransform.join(' ')}` : ''
+    const animAttr = getAnimationAttributes(component.animations)
 
-  return `<div ${animAttr} style="position:absolute; ${style}"><img src="${safeUrl}" style="width:100%;height:100%;object-fit:fill;${imgStyle}" /></div>`
+    return `<div ${animAttr} style="position:absolute; ${style}"><img src="${safeUrl}" style="width:100%;height:100%;object-fit:fill;${imgStyle}" /></div>`
 }
 
 /**
  * 渲染矩形组件（RectShape）
  */
 function renderRectShape(ctx: RenderContext): string {
-  const { component } = ctx
-  const text = component.propValue as string || ''
-  const baseStyle = styleToInline(component.style as unknown as Record<string, unknown>)
-  const style = `position:absolute; overflow:hidden; ${baseStyle}`
-  const animAttr = getAnimationAttributes(component.animations)
-  const childrenHtml = renderChildren(ctx)
-  const escapedText = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    const { component } = ctx
+    const text = component.propValue as string || ''
+    const baseStyle = styleToInline(component.style as unknown as Record<string, unknown>)
+    const style = `position:absolute; overflow:hidden; ${baseStyle}`
+    const animAttr = getAnimationAttributes(component.animations)
+    const childrenHtml = renderChildren(ctx)
+    const escapedText = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
-  return `<div ${animAttr} style="${style}"><div style="padding:4px;">${escapedText}</div>${childrenHtml}</div>`
+    return `<div ${animAttr} style="${style}"><div style="padding:4px;">${escapedText}</div>${childrenHtml}</div>`
 }
 
 /**
  * 渲染圆形组件（CircleShape）
  */
 function renderCircleShape(ctx: RenderContext): string {
-  const { component } = ctx
-  const text = component.propValue as string || ''
-  const baseStyle = styleToInline(component.style as unknown as Record<string, unknown>)
-  const style = `position:absolute; display:flex; align-items:center; justify-content:center; overflow:hidden; ${baseStyle}`
-  const animAttr = getAnimationAttributes(component.animations)
-  const escapedText = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    const { component } = ctx
+    const text = component.propValue as string || ''
+    const baseStyle = styleToInline(component.style as unknown as Record<string, unknown>)
+    const style = `position:absolute; display:flex; align-items:center; justify-content:center; overflow:hidden; ${baseStyle}`
+    const animAttr = getAnimationAttributes(component.animations)
+    const escapedText = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
-  return `<div ${animAttr} style="${style}"><span>${escapedText}</span></div>`
+    return `<div ${animAttr} style="${style}"><span>${escapedText}</span></div>`
 }
 
 /**
  * 渲染线条组件（LineShape）
  */
 function renderLineShape(ctx: RenderContext): string {
-  const { component } = ctx
-  const baseStyle = styleToInline(component.style as unknown as Record<string, unknown>)
-  const animAttr = getAnimationAttributes(component.animations)
+    const { component } = ctx
+    const baseStyle = styleToInline(component.style as unknown as Record<string, unknown>)
+    const animAttr = getAnimationAttributes(component.animations)
 
-  return `<div ${animAttr} style="position:absolute; ${baseStyle}"></div>`
+    return `<div ${animAttr} style="position:absolute; ${baseStyle}"></div>`
 }
 
 /**
  * 渲染 SVG 星形（SVGStar）
  */
 function renderSVGStar(ctx: RenderContext): string {
-  const { component } = ctx
-  const style = component.style
-  const w = style.width || 80
-  const h = style.height || 80
-  const fill = style.color || '#000'
-  const bg = style.backgroundColor || 'transparent'
-  const animAttr = getAnimationAttributes(component.animations)
+    const { component } = ctx
+    const style = component.style
+    const w = style.width || 80
+    const h = style.height || 80
+    const fill = style.color || '#000'
+    const bg = style.backgroundColor || 'transparent'
+    const animAttr = getAnimationAttributes(component.animations)
 
-  return `<div ${animAttr} style="position:absolute; left:${style.left ?? 0}px; top:${style.top ?? 0}px; width:${w}px; height:${h}px; background:${bg};">
+    return `<div ${animAttr} style="position:absolute; left:${style.left ?? 0}px; top:${style.top ?? 0}px; width:${w}px; height:${h}px; background:${bg};">
     <svg viewBox="0 0 24 24" width="${w}" height="${h}" fill="${fill}">
       <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
     </svg>
@@ -251,15 +252,15 @@ function renderSVGStar(ctx: RenderContext): string {
  * 渲染 SVG 三角形（SVGTriangle）
  */
 function renderSVGTriangle(ctx: RenderContext): string {
-  const { component } = ctx
-  const style = component.style
-  const w = style.width || 80
-  const h = style.height || 80
-  const fill = style.color || '#000'
-  const bg = style.backgroundColor || 'transparent'
-  const animAttr = getAnimationAttributes(component.animations)
+    const { component } = ctx
+    const style = component.style
+    const w = style.width || 80
+    const h = style.height || 80
+    const fill = style.color || '#000'
+    const bg = style.backgroundColor || 'transparent'
+    const animAttr = getAnimationAttributes(component.animations)
 
-  return `<div ${animAttr} style="position:absolute; left:${style.left ?? 0}px; top:${style.top ?? 0}px; width:${w}px; height:${h}px; background:${bg};">
+    return `<div ${animAttr} style="position:absolute; left:${style.left ?? 0}px; top:${style.top ?? 0}px; width:${w}px; height:${h}px; background:${bg};">
     <svg viewBox="0 0 24 24" width="${w}" height="${h}" fill="${fill}">
       <path d="M12 2L2 22h20L12 2z"/>
     </svg>
@@ -270,100 +271,100 @@ function renderSVGTriangle(ctx: RenderContext): string {
  * 渲染表格组件（VTable）
  */
 function renderVTable(ctx: RenderContext): string {
-  const { component } = ctx
-  const style = styleToInline(component.style as unknown as Record<string, unknown>)
-  const propValue = component.propValue as { data?: string[][]; stripe?: boolean; thBold?: boolean } || {}
-  const data = propValue.data || []
-  const animAttr = getAnimationAttributes(component.animations)
+    const { component } = ctx
+    const style = styleToInline(component.style as unknown as Record<string, unknown>)
+    const propValue = component.propValue as { data?: string[][]; stripe?: boolean; thBold?: boolean } || {}
+    const data = propValue.data || []
+    const animAttr = getAnimationAttributes(component.animations)
 
-  if (data.length === 0) {
-    return `<div style="position:absolute; display:flex; align-items:center; justify-content:center; ${style}">空表格</div>`
-  }
+    if (data.length === 0) {
+        return `<div style="position:absolute; display:flex; align-items:center; justify-content:center; ${style}">空表格</div>`
+    }
 
-  const headerRow = data[0] || []
-  const bodyRows = data.slice(1)
-  const headers = headerRow.map((h: string) => `<th style="border:1px solid #d9d9d9;padding:4px 8px;${propValue.thBold ? 'font-weight:bold' : ''}">${escapeHtml(h)}</th>`).join('')
-  const rows = bodyRows.map((row: string[]) => {
-    const cells = row.map((cell: string) => `<td style="border:1px solid #d9d9d9;padding:4px 8px;">${escapeHtml(cell)}</td>`).join('')
-    return `<tr>${cells}</tr>`
-  }).join('')
+    const headerRow = data[0] || []
+    const bodyRows = data.slice(1)
+    const headers = headerRow.map((h: string) => `<th style="border:1px solid #d9d9d9;padding:4px 8px;${propValue.thBold ? 'font-weight:bold' : ''}">${escapeHtml(h)}</th>`).join('')
+    const rows = bodyRows.map((row: string[]) => {
+        const cells = row.map((cell: string) => `<td style="border:1px solid #d9d9d9;padding:4px 8px;">${escapeHtml(cell)}</td>`).join('')
+        return `<tr>${cells}</tr>`
+    }).join('')
 
-  const tableStyle = propValue.stripe ? 'border-collapse:collapse;width:100%;height:100%;' : 'border-collapse:collapse;width:100%;height:100%;'
+    const tableStyle = propValue.stripe ? 'border-collapse:collapse;width:100%;height:100%;' : 'border-collapse:collapse;width:100%;height:100%;'
 
-  return `<div ${animAttr} style="position:absolute; overflow:auto; ${style}"><table style="${tableStyle}"><thead><tr>${headers}</tr></thead><tbody>${rows}</tbody></table></div>`
+    return `<div ${animAttr} style="position:absolute; overflow:auto; ${style}"><table style="${tableStyle}"><thead><tr>${headers}</tr></thead><tbody>${rows}</tbody></table></div>`
 }
 
 /**
  * 渲染图表组件（VChart）—— 降级为占位图
  */
 function renderVChart(ctx: RenderContext): string {
-  const { component } = ctx
-  const style = styleToInline(component.style as unknown as Record<string, unknown>)
-  const animAttr = getAnimationAttributes(component.animations)
+    const { component } = ctx
+    const style = styleToInline(component.style as unknown as Record<string, unknown>)
+    const animAttr = getAnimationAttributes(component.animations)
 
-  return `<div ${animAttr} style="position:absolute; display:flex; align-items:center; justify-content:center; background:#f5f5f5; color:#999; font-size:14px; ${style}"><div style="text-align:center;"><div>📊 图表</div><div style="font-size:12px;margin-top:4px;">导出 HTML 暂不支持动态图表</div></div></div>`
+    return `<div ${animAttr} style="position:absolute; display:flex; align-items:center; justify-content:center; background:#f5f5f5; color:#999; font-size:14px; ${style}"><div style="text-align:center;"><div>📊 图表</div><div style="font-size:12px;margin-top:4px;">导出 HTML 暂不支持动态图表</div></div></div>`
 }
 
 /**
  * 渲染 Group 组件
  */
 function renderGroup(ctx: RenderContext): string {
-  const { component } = ctx
-  const style = styleToInline(component.style as unknown as Record<string, unknown>)
-  const children = component.propValue as ComponentData[]
+    const { component } = ctx
+    const style = styleToInline(component.style as unknown as Record<string, unknown>)
+    const children = component.propValue as ComponentData[]
 
-  let childrenHtml = ''
-  if (Array.isArray(children)) {
-    childrenHtml = children.map(child => renderComponent({ component: child, allComponents: ctx.allComponents })).join('\n')
-  }
+    let childrenHtml = ''
+    if (Array.isArray(children)) {
+        childrenHtml = children.map(child => renderComponent({ component: child, allComponents: ctx.allComponents })).join('\n')
+    }
 
-  return `<div style="position:absolute; ${style}">${childrenHtml}</div>`
+    return `<div style="position:absolute; ${style}">${childrenHtml}</div>`
 }
 
 /**
  * 渲染子组件（通过 parentId 查找）
  */
 function renderChildren(ctx: RenderContext): string {
-  const { component, allComponents } = ctx
-  const children = allComponents.filter(c => c.parentId === component.id)
-  if (children.length === 0) return ''
+    const { component, allComponents } = ctx
+    const children = allComponents.filter(c => c.parentId === component.id)
+    if (children.length === 0) return ''
 
-  return children.map(child => renderComponent({ component: child, allComponents })).join('\n')
+    return children.map(child => renderComponent({ component: child, allComponents })).join('\n')
 }
 
 // ==================== 渲染分发 ====================
 
 const RENDERERS: Record<string, (ctx: RenderContext) => string> = {
-  VText: renderVText,
-  VButton: renderVButton,
-  Picture: renderPicture,
-  RectShape: renderRectShape,
-  CircleShape: renderCircleShape,
-  LineShape: renderLineShape,
-  SVGStar: renderSVGStar,
-  SVGTriangle: renderSVGTriangle,
-  VTable: renderVTable,
-  VChart: renderVChart,
-  Group: renderGroup,
+    VText: renderVText,
+    VButton: renderVButton,
+    Picture: renderPicture,
+    RectShape: renderRectShape,
+    CircleShape: renderCircleShape,
+    LineShape: renderLineShape,
+    SVGStar: renderSVGStar,
+    SVGTriangle: renderSVGTriangle,
+    VTable: renderVTable,
+    VChart: renderVChart,
+    Group: renderGroup,
 }
 
 function renderComponent(ctx: RenderContext): string {
-  const renderer = RENDERERS[ctx.component.component]
-  if (!renderer) {
+    const renderer = RENDERERS[ctx.component.component]
+    if (!renderer) {
     // 未知组件，渲染为空白占位
-    const style = styleToInline(ctx.component.style as unknown as Record<string, unknown>)
-    return `<div style="position:absolute; display:flex; align-items:center; justify-content:center; background:#eee; color:#999; font-size:12px; ${style}">${ctx.component.component}</div>`
-  }
-  return renderer(ctx)
+        const style = styleToInline(ctx.component.style as unknown as Record<string, unknown>)
+        return `<div style="position:absolute; display:flex; align-items:center; justify-content:center; background:#eee; color:#999; font-size:12px; ${style}">${ctx.component.component}</div>`
+    }
+    return renderer(ctx)
 }
 
 function buildEventAttribute(events: Record<string, string>): string {
-  const entries = Object.entries(events)
-  if (entries.length === 0) return ''
+    const entries = Object.entries(events)
+    if (entries.length === 0) return ''
 
-  // 只处理第一个事件，使用 data 属性存储（避免内联 JS 注入）
-  const [type, param] = entries[0]
-  return `data-event-type="${escapeHtml(type)}" data-event-param="${escapeHtml(param)}"`
+    // 只处理第一个事件，使用 data 属性存储（避免内联 JS 注入）
+    const [type, param] = entries[0]
+    return `data-event-type="${escapeHtml(type)}" data-event-param="${escapeHtml(param)}"`
 }
 
 // ==================== 主导出函数 ====================
@@ -379,18 +380,18 @@ export interface ExportHtmlOptions {
  * @returns HTML 字符串
  */
 export function exportToHtml({ title = '低代码页面', componentData, canvasStyle }: ExportHtmlOptions): string {
-  const rootComponents = componentData.filter(c => !c.parentId)
-  const canvasWidth = canvasStyle.width || 1200
-  const canvasHeight = canvasStyle.height || 740
-  const bgColor = isValidCssColor(canvasStyle.backgroundColor || '') ? canvasStyle.backgroundColor : '#fff'
+    const rootComponents = componentData.filter(c => !c.parentId)
+    const canvasWidth = canvasStyle.width || 1200
+    const canvasHeight = canvasStyle.height || 740
+    const bgColor = isValidCssColor(canvasStyle.backgroundColor || '') ? canvasStyle.backgroundColor : '#fff'
 
-  // 渲染所有根组件
-  const componentsHtml = rootComponents
-    .map(component => renderComponent({ component, allComponents: componentData }))
-    .join('\n    ')
+    // 渲染所有根组件
+    const componentsHtml = rootComponents
+        .map(component => renderComponent({ component, allComponents: componentData }))
+        .join('\n    ')
 
-  // 构建完整 HTML
-  return `<!DOCTYPE html>
+    // 构建完整 HTML
+    return `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -452,13 +453,13 @@ document.addEventListener('DOMContentLoaded', function() {
  * 下载 HTML 文件
  */
 export function downloadHtmlFile(html: string, filename: string = 'page.html'): void {
-  const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.setAttribute('download', filename)
-  a.href = url
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  URL.revokeObjectURL(url)
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.setAttribute('download', filename)
+    a.href = url
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
 }

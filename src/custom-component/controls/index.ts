@@ -18,17 +18,17 @@ import SwitchControl from './SwitchControl.vue'
  * 属性面板根据 propConfigs[i].type 在这里查找对应控件
  */
 export const controlMap: Record<string, Component> = {
-  input: InputControl,
-  textarea: TextareaControl,
-  number: NumberControl,
-  color: ColorControl,
-  select: SelectControl,
-  switch: SwitchControl,
+    input: InputControl,
+    textarea: TextareaControl,
+    number: NumberControl,
+    color: ColorControl,
+    select: SelectControl,
+    switch: SwitchControl,
 }
 
 /**
  * 根据 type 获取控件组件
  */
 export function getControl(type: string): Component {
-  return controlMap[type] || InputControl
+    return controlMap[type] || InputControl
 }

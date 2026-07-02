@@ -6,5 +6,5 @@ import { nanoid } from 'nanoid'
  * @returns 唯一 ID 字符串
  */
 export default function generateID(): string {
-  return nanoid()
+    return nanoid()
 }

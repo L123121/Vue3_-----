@@ -6,32 +6,32 @@ import type { Animation } from '@/types'
  * @param animations 动画配置数组
  */
 export default async function runAnimation(
-  $el: HTMLElement,
-  animations: Animation[] = []
+    $el: HTMLElement,
+    animations: Animation[] = [],
 ): Promise<void> {
-  const play = (animation: Animation): Promise<void> =>
-    new Promise(resolve => {
-      const { duration = 1000, type: value = '', infinite: isLoop } = animation
-      const animationTime = duration / 1000 // 转换为秒
+    const play = (animation: Animation): Promise<void> =>
+        new Promise(resolve => {
+            const { duration = 1000, type: value = '', infinite: isLoop } = animation
+            const animationTime = duration / 1000 // 转换为秒
 
-      $el.style.setProperty('--time', `${animationTime}s`)
-      $el.classList.add(value, 'animated', utilsHandle(isLoop))
+            $el.style.setProperty('--time', `${animationTime}s`)
+            $el.classList.add(value, 'animated', utilsHandle(isLoop))
 
-      const removeAnimation = () => {
-        $el.removeEventListener('animationend', removeAnimation)
-        $el.removeEventListener('animationcancel', removeAnimation)
-        $el.classList.remove(value, 'animated', utilsHandle(isLoop))
-        $el.style.removeProperty('--time')
-        resolve()
-      }
+            const removeAnimation = () => {
+                $el.removeEventListener('animationend', removeAnimation)
+                $el.removeEventListener('animationcancel', removeAnimation)
+                $el.classList.remove(value, 'animated', utilsHandle(isLoop))
+                $el.style.removeProperty('--time')
+                resolve()
+            }
 
-      $el.addEventListener('animationend', removeAnimation)
-      $el.addEventListener('animationcancel', removeAnimation)
-    })
+            $el.addEventListener('animationend', removeAnimation)
+            $el.addEventListener('animationcancel', removeAnimation)
+        })
 
-  for (let i = 0, len = animations.length; i < len; i++) {
-    await play(animations[i])
-  }
+    for (let i = 0, len = animations.length; i < len; i++) {
+        await play(animations[i])
+    }
 }
 
 /**
@@ -40,5 +40,5 @@ export default async function runAnimation(
  * @returns 类名字符串
  */
 function utilsHandle(isLoop: boolean): string {
-  return isLoop ? 'infinite' : 'no-infinite'
+    return isLoop ? 'infinite' : 'no-infinite'
 }

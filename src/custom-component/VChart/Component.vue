@@ -1,5 +1,10 @@
 <template>
-  <v-chart ref="chartRef" class="chart" :option="propValue.option" autoresize />
+    <v-chart
+        ref="chartRef"
+        class="chart"
+        :option="propValue.option"
+        autoresize
+    />
 </template>
 
 <script setup lang="ts">
@@ -13,14 +18,14 @@ import { useOnEvent } from '../common/useOnEvent'
 import type { ComponentData, ChartPropValue, LinkageConfig } from '@/types'
 
 use([
-  CanvasRenderer,
-  ScatterChart,
-  TitleComponent,
-  TooltipComponent,
-  LegendComponent,
-  GridComponent,
-  BarChart,
-  LineChart,
+    CanvasRenderer,
+    ScatterChart,
+    TitleComponent,
+    TooltipComponent,
+    LegendComponent,
+    GridComponent,
+    BarChart,
+    LineChart,
 ])
 
 interface Props {
@@ -37,6 +42,6 @@ useOnEvent(props, chartRef)
 
 <style scoped>
 .chart {
-  height: 400px;
+  height: 100%;
 }
 </style>

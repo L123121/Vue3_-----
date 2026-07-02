@@ -1,7 +1,7 @@
 <template>
-  <div ref="circleRef" class="circle-shape">
-    <VText :prop-value="element.propValue" :element="element" />
-  </div>
+    <div ref="circleRef" class="circle-shape">
+        <VText :prop-value="element.propValue" :element="element" />
+    </div>
 </template>
 
 <script setup lang="ts">

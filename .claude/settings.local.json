@@ -56,7 +56,24 @@
       "Bash(node *)",
       "Bash(npx playwright *)",
       "Bash(taskkill /F /IM node.exe)",
-      "Bash(npm init *)"
+      "Bash(npm init *)",
+      "Bash(npx eslint *)",
+      "Bash(echo \"exit:$?\")",
+      "Bash(echo \"tsc exit: $?\")",
+      "Bash(npx vitest *)",
+      "Bash(ls -la .github)",
+      "Bash(mkdir -p .github/workflows)",
+      "Bash(find server *)",
+      "Bash(wc -l server/index.js)",
+      "Bash(ls server/)",
+      "Bash(echo \"EXIT: $?\")",
+      "Bash(node -e \"require\\('ws'\\); require\\('yjs'\\); require\\('y-protocols/sync'\\); require\\('lib0/encoding'\\); console.log\\('all deps OK'\\)\")",
+      "Bash(node server/index.js)",
+      "Bash(curl -s http://localhost:1234)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8080)",
+      "Bash(curl -s http://localhost:8080)",
+      "Bash(curl -s \"http://localhost:8080/?collab=1\")",
+      "Bash(git commit -m 'feat: 协同编辑模块完整实现 + 体验优化 *)"
     ]
   }
 }

@@ -1,9 +1,11 @@
 <template>
     <div class="attr-container">
-        <p class="title">画布属性</p>
+        <p class="title">
+            画布属性
+        </p>
         <el-form style="padding: 20px;">
             <el-form-item v-for="(key, index) in Object.keys(options)" :key="index" :label="options[key]">
-                <el-color-picker v-if="isIncludesColor(key)" v-model="canvasStyleData[key]" show-alpha></el-color-picker>
+                <el-color-picker v-if="isIncludesColor(key)" v-model="canvasStyleData[key]" show-alpha />
                 <el-input v-else v-model.number="canvasStyleData[key]" type="number" />
             </el-form-item>
         </el-form>
@@ -18,14 +20,14 @@ const store = useStore()
 const { canvasStyleData } = storeToRefs(store)
 
 const options: Record<string, string> = {
-  color: '颜色',
-  opacity: '不透明度',
-  backgroundColor: '背景色',
-  fontSize: '字体大小',
+    color: '颜色',
+    opacity: '不透明度',
+    backgroundColor: '背景色',
+    fontSize: '字体大小',
 }
 
 function isIncludesColor(str: string): boolean {
-  return str.toLowerCase().includes('color')
+    return str.toLowerCase().includes('color')
 }
 </script>
 

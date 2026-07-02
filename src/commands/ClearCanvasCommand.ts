@@ -1,33 +1,61 @@
-import { BaseCommand } from './BaseCommand'
-import { CommandType } from './types'
+import { BaseCommand, getContext } from './BaseCommand'
+import { CommandType, type CommandEnvelope } from './types'
+import { register } from './registry'
 import type { ComponentData } from '@/types'
-import { useStore } from '@/store'
+import { nanoid } from 'nanoid'
+
+interface ClearData {
+    backupData: ComponentData[]
+}
 
 /**
  * 清空画布命令
  */
 export class ClearCanvasCommand extends BaseCommand {
-  type = CommandType.CLEAR_CANVAS
-  description = '清空画布'
-  mergeable = false
+    type = CommandType.CLEAR_CANVAS
+    description = '清空画布'
+    mergeable = false
 
-  private backupData: ComponentData[] = []
+    private clearData: ClearData
 
-  execute(): void {
-    const store = useStore()
-    // 浅拷贝数组，复用未变化的组件对象，减少内存开销
-    this.backupData = store.componentData.slice()
-    this.data = {
-      count: this.backupData.length,
+    constructor() {
+        super()
+        this.id = nanoid()
+        this.clearData = { backupData: [] }
+        this.data = this.clearData as unknown as Record<string, unknown>
     }
 
-    store.componentData = []
-    store.curComponent = null
-    store.curComponentIndex = null
-  }
+    execute(): void {
+        const ctx = getContext()
+        // 备份当前所有组件(撤销用)
+        this.clearData.backupData = ctx.getAll().map(c => structuredClone(c))
+        this.data = { backupData: this.clearData.backupData } as unknown as Record<string, unknown>
 
-  undo(): void {
-    const store = useStore()
-    store.componentData = this.backupData.slice()
-  }
+        ctx.replaceAll([])
+        ctx.setCurComponent(null)
+    }
+
+    undo(): void {
+        const ctx = getContext()
+        ctx.replaceAll(this.clearData.backupData.map(c => structuredClone(c)))
+    }
+
+    canMergeWith(): boolean {
+        return false
+    }
+
+    merge(other: import('./types').Command): import('./types').Command {
+        return other
+    }
 }
+
+register(CommandType.CLEAR_CANVAS, (env: CommandEnvelope) => {
+    const d = env.data as unknown as ClearData
+    const cmd = new ClearCanvasCommand()
+    cmd.id = env.id
+    ;(cmd as unknown as { clearData: ClearData }).clearData = {
+        backupData: (d.backupData ?? []).map(c => structuredClone(c)),
+    }
+    cmd.data = (cmd as unknown as { clearData: ClearData }).clearData as unknown as Record<string, unknown>
+    return cmd
+})

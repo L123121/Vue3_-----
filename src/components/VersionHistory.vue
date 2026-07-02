@@ -1,83 +1,89 @@
 <template>
-  <div class="version-history">
-    <div class="header">
-      <h3>版本历史</h3>
-      <el-button type="primary" @click="showSaveDialog = true">
-        <el-icon><Plus /></el-icon>
-        保存版本
-      </el-button>
-    </div>
-
-    <div class="version-list">
-      <div v-if="versions.length === 0" class="empty">
-        <el-icon :size="48"><DocumentCopy /></el-icon>
-        <p>暂无版本记录</p>
-        <p class="tip">点击上方按钮保存当前页面版本</p>
-      </div>
-
-      <div
-        v-for="version in sortedVersions"
-        :key="version.id"
-        class="version-item"
-      >
-        <div class="version-info">
-          <div class="version-name">
-            <el-icon><Folder /></el-icon>
-            {{ version.name }}
-          </div>
-          <div class="version-meta">
-            <span class="time">{{ formatDate(version.createdAt) }}</span>
-            <span v-if="version.description" class="desc">{{ version.description }}</span>
-          </div>
+    <div class="version-history">
+        <div class="header">
+            <h3>版本历史</h3>
+            <el-button type="primary" @click="showSaveDialog = true">
+                <el-icon><Plus /></el-icon>
+                保存版本
+            </el-button>
         </div>
-        <div class="version-actions">
-          <el-button size="small" @click="handleRestore(version.id)">
-            <el-icon><RefreshRight /></el-icon>
-            恢复
-          </el-button>
-          <el-button size="small" type="danger" @click="handleDelete(version.id)">
-            <el-icon><Delete /></el-icon>
-            删除
-          </el-button>
-        </div>
-      </div>
-    </div>
 
-    <!-- 保存版本弹窗 -->
-    <el-dialog
-      v-model="showSaveDialog"
-      title="保存版本"
-      width="400px"
-      :close-on-click-modal="false"
-    >
-      <el-form :model="form" label-width="80px">
-        <el-form-item label="版本名称" required>
-          <el-input
-            v-model="form.name"
-            placeholder="例如：v1.0 初始版本"
-            maxlength="50"
-            show-word-limit
-          />
-        </el-form-item>
-        <el-form-item label="版本描述">
-          <el-input
-            v-model="form.description"
-            type="textarea"
-            :rows="3"
-            placeholder="描述本次版本的主要变更"
-            maxlength="200"
-            show-word-limit
-          />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="showSaveDialog = false">取消</el-button>
-        <el-button type="primary" @click="handleSave" :disabled="!form.name.trim()">
-          保存
-        </el-button>
-      </template>
-    </el-dialog>
-  </div>
+        <div class="version-list">
+            <div v-if="versions.length === 0" class="empty">
+                <el-icon :size="48">
+                    <DocumentCopy />
+                </el-icon>
+                <p>暂无版本记录</p>
+                <p class="tip">
+                    点击上方按钮保存当前页面版本
+                </p>
+            </div>
+
+            <div
+                v-for="version in sortedVersions"
+                :key="version.id"
+                class="version-item"
+            >
+                <div class="version-info">
+                    <div class="version-name">
+                        <el-icon><Folder /></el-icon>
+                        {{ version.name }}
+                    </div>
+                    <div class="version-meta">
+                        <span class="time">{{ formatDate(version.createdAt) }}</span>
+                        <span v-if="version.description" class="desc">{{ version.description }}</span>
+                    </div>
+                </div>
+                <div class="version-actions">
+                    <el-button size="small" @click="handleRestore(version.id)">
+                        <el-icon><RefreshRight /></el-icon>
+                        恢复
+                    </el-button>
+                    <el-button size="small" type="danger" @click="handleDelete(version.id)">
+                        <el-icon><Delete /></el-icon>
+                        删除
+                    </el-button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 保存版本弹窗 -->
+        <el-dialog
+            v-model="showSaveDialog"
+            title="保存版本"
+            width="400px"
+            :close-on-click-modal="false"
+        >
+            <el-form :model="form" label-width="80px">
+                <el-form-item label="版本名称" required>
+                    <el-input
+                        v-model="form.name"
+                        placeholder="例如：v1.0 初始版本"
+                        maxlength="50"
+                        show-word-limit
+                    />
+                </el-form-item>
+                <el-form-item label="版本描述">
+                    <el-input
+                        v-model="form.description"
+                        type="textarea"
+                        :rows="3"
+                        placeholder="描述本次版本的主要变更"
+                        maxlength="200"
+                        show-word-limit
+                    />
+                </el-form-item>
+            </el-form>
+            <template #footer>
+                <el-button @click="showSaveDialog = false">
+                    取消
+                </el-button>
+                <el-button type="primary" :disabled="!form.name.trim()" @click="handleSave">
+                    保存
+                </el-button>
+            </template>
+        </el-dialog>
+    </div>
 </template>
 
 <script setup lang="ts">
@@ -92,67 +98,67 @@ const { versions } = storeToRefs(store)
 
 const showSaveDialog = ref(false)
 const form = ref({
-  name: '',
-  description: '',
+    name: '',
+    description: '',
 })
 
 // 按时间倒序排列
 const sortedVersions = computed(() => {
-  return [...versions.value].sort((a, b) => {
-    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  })
+    return [...versions.value].sort((a, b) => {
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    })
 })
 
 function formatDate(dateStr: string): string {
-  const date = new Date(dateStr)
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  const hours = String(date.getHours()).padStart(2, '0')
-  const minutes = String(date.getMinutes()).padStart(2, '0')
-  return `${year}-${month}-${day} ${hours}:${minutes}`
+    const date = new Date(dateStr)
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    const hours = String(date.getHours()).padStart(2, '0')
+    const minutes = String(date.getMinutes()).padStart(2, '0')
+    return `${year}-${month}-${day} ${hours}:${minutes}`
 }
 
 function handleSave(): void {
-  store.saveVersion(form.value.name.trim(), form.value.description.trim())
-  showSaveDialog.value = false
-  form.value = { name: '', description: '' }
+    store.saveVersion(form.value.name.trim(), form.value.description.trim())
+    showSaveDialog.value = false
+    form.value = { name: '', description: '' }
 }
 
 function handleRestore(versionId: string): void {
-  ElMessageBox.confirm(
-    '恢复版本将覆盖当前页面内容，是否继续？',
-    '提示',
-    {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning',
-    }
-  ).then(() => {
-    store.restoreVersion(versionId)
-  }).catch(() => {
+    ElMessageBox.confirm(
+        '恢复版本将覆盖当前页面内容，是否继续？',
+        '提示',
+        {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            type: 'warning',
+        },
+    ).then(() => {
+        store.restoreVersion(versionId)
+    }).catch(() => {
     // 用户取消
-  })
+    })
 }
 
 function handleDelete(versionId: string): void {
-  ElMessageBox.confirm(
-    '删除后无法恢复，是否继续？',
-    '提示',
-    {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning',
-    }
-  ).then(() => {
-    store.deleteVersion(versionId)
-  }).catch(() => {
+    ElMessageBox.confirm(
+        '删除后无法恢复，是否继续？',
+        '提示',
+        {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            type: 'warning',
+        },
+    ).then(() => {
+        store.deleteVersion(versionId)
+    }).catch(() => {
     // 用户取消
-  })
+    })
 }
 
 onMounted(() => {
-  store.loadVersionsFromStorage()
+    store.loadVersionsFromStorage()
 })
 </script>
 

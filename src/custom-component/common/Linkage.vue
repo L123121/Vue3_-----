@@ -12,7 +12,9 @@
                         :value="component.id"
                         :label="component.label"
                     >
-                        <div @mouseenter="onEnter(i)" @mouseout="onOut(i)">{{ component.label }}</div>
+                        <div @mouseenter="onEnter(i)" @mouseout="onOut(i)">
+                            {{ component.label }}
+                        </div>
                     </el-option>
                 </el-select>
                 <el-select v-model="item.event" placeholder="请选择监听事件">
@@ -21,7 +23,7 @@
                         :key="e.value"
                         :value="e.value"
                         :label="e.label"
-                    ></el-option>
+                    />
                 </el-select>
                 <p>事件触发时，当前组件要修改的属性</p>
                 <div v-for="(e, i) in item.style" :key="i" class="attr-container">
@@ -31,16 +33,16 @@
                             :key="attr"
                             :value="attr"
                             :label="styleMap[attr]"
-                        ></el-option>
+                        />
                     </el-select>
-                    <el-color-picker v-if="isIncludesColor(e.key)" v-model="e.value" show-alpha></el-color-picker>
+                    <el-color-picker v-if="isIncludesColor(e.key)" v-model="e.value" show-alpha />
                     <el-select v-else-if="selectKey.includes(e.key)" v-model="e.value">
                         <el-option
                             v-for="option in optionMap[e.key]"
                             :key="option.value"
                             :label="option.label"
                             :value="option.value"
-                        ></el-option>
+                        />
                     </el-select>
                     <el-input
                         v-else
@@ -52,11 +54,15 @@
                         <Delete />
                     </el-icon>
                 </div>
-                <el-button @click="addAttr(item.style)">添加属性</el-button>
+                <el-button @click="addAttr(item.style)">
+                    添加属性
+                </el-button>
             </div>
-            <el-button style="margin-bottom: 10px;" @click="addComponent">添加组件</el-button>
+            <el-button style="margin-bottom: 10px;" @click="addComponent">
+                添加组件
+            </el-button>
             <p>过渡时间（秒）</p>
-            <el-input v-model="linkage.duration" class="input-duration" placeholder="请输入"></el-input>
+            <el-input v-model="linkage.duration" class="input-duration" placeholder="请输入" />
         </el-form>
     </el-collapse-item>
 </template>

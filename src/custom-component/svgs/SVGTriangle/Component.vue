@@ -1,16 +1,16 @@
 <template>
-  <div ref="containerRef" class="svg-triangle-container">
-    <svg version="1.1" baseProfile="full" xmlns="http://www.w3.org/2000/svg">
-      <polygon
-        ref="triangle"
-        :points="points"
-        :stroke="element.style.borderColor"
-        :fill="element.style.backgroundColor"
-        stroke-width="1"
-      />
-    </svg>
-    <VText :prop-value="element.propValue" :element="element" />
-  </div>
+    <div ref="containerRef" class="svg-triangle-container">
+        <svg version="1.1" baseProfile="full" xmlns="http://www.w3.org/2000/svg">
+            <polygon
+                ref="triangle"
+                :points="points"
+                :stroke="element.style.borderColor"
+                :fill="element.style.backgroundColor"
+                stroke-width="1"
+            />
+        </svg>
+        <VText :prop-value="element.propValue" :element="element" />
+    </div>
 </template>
 
 <script setup lang="ts">
@@ -31,27 +31,27 @@ const points = ref('')
 useOnEvent(props, containerRef)
 
 onMounted(() => {
-  draw()
+    draw()
 })
 
 watch(() => props.element.style.width, draw)
 watch(() => props.element.style.height, draw)
 
 function draw(): void {
-  const { width, height } = props.element.style
-  drawTriangle(width, height)
+    const { width, height } = props.element.style
+    drawTriangle(width, height)
 }
 
 function drawTriangle(width: number, height: number): void {
-  // 三角形三个坐标点的比例集合
-  const pointsArr: [number, number][] = [
-    [0.5, 0.05],
-    [1, 0.95],
-    [0, 0.95],
-  ]
+    // 三角形三个坐标点的比例集合
+    const pointsArr: [number, number][] = [
+        [0.5, 0.05],
+        [1, 0.95],
+        [0, 0.95],
+    ]
 
-  const coordinatePoints = pointsArr.map(point => width * point[0] + ' ' + height * point[1])
-  points.value = coordinatePoints.toString()
+    const coordinatePoints = pointsArr.map(point => width * point[0] + ' ' + height * point[1])
+    points.value = coordinatePoints.toString()
 }
 </script>
 

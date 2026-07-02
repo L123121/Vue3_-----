@@ -10,7 +10,7 @@
             <el-icon v-if="iconMap[item.icon]" :size="24" class="icon-component">
                 <component :is="iconMap[item.icon]" />
             </el-icon>
-            <span v-else class="iconfont" :class="'icon-' + item.icon"></span>
+            <span v-else class="iconfont" :class="'icon-' + item.icon" />
 
             <span v-if="item.acceptChildren" class="container-badge">容器</span>
             <span class="text">{{ item.label }}</span>
@@ -23,16 +23,16 @@ import { getPublicComponents } from '@/custom-component/registry'
 import type { ComponentMetaData } from '@/custom-component/registry'
 import type { Component } from 'vue'
 import {
-  DataAnalysis,
-  Edit,
-  Mouse,
-  Picture as PictureIcon,
-  FullScreen,
-  Minus,
-  CircleCheck,
-  Star,
-  CaretTop,
-  Grid
+    DataAnalysis,
+    Edit,
+    Mouse,
+    Picture as PictureIcon,
+    FullScreen,
+    Minus,
+    CircleCheck,
+    Star,
+    CaretTop,
+    Grid,
 } from '@element-plus/icons-vue'
 
 // ==================== 从注册表获取公开组件列表 ====================
@@ -41,22 +41,22 @@ import {
 const componentList: ComponentMetaData[] = getPublicComponents()
 
 const iconMap: Record<string, Component> = {
-  'wenben': Edit,
-  'button': Mouse,
-  'tupian': PictureIcon,
-  'juxing': FullScreen,
-  'zhixian': Minus,
-  '24gl-circle': CircleCheck,
-  'kongxinputao': Star,
-  'xingzhuang-sanjiaoxing': CaretTop,
-  'biaoge': Grid,
-  'DataAnalysis': DataAnalysis,
+    'wenben': Edit,
+    'button': Mouse,
+    'tupian': PictureIcon,
+    'juxing': FullScreen,
+    'zhixian': Minus,
+    '24gl-circle': CircleCheck,
+    'kongxinputao': Star,
+    'xingzhuang-sanjiaoxing': CaretTop,
+    'biaoge': Grid,
+    'DataAnalysis': DataAnalysis,
 }
 
 function handleDragStart(e: DragEvent): void {
-  const target = e.target as HTMLElement
-  const listEl = target.closest('.list') as HTMLElement
-  if (listEl && e.dataTransfer) {
+    const target = e.target as HTMLElement
+    const listEl = target.closest('.list') as HTMLElement
+    if (listEl && e.dataTransfer) {
     e.dataTransfer!.setData('index', listEl.dataset.index || '')
     // 自定义拖拽预览：显示小标签而非整个卡片
     const ghost = document.createElement('div')
@@ -66,11 +66,11 @@ function handleDragStart(e: DragEvent): void {
     e.dataTransfer.setDragImage(ghost, 30, 14)
     // 使用 setTimeout 兜底，确保 ghost 元素一定被移除
     setTimeout(() => {
-      if (ghost.parentNode) {
-        document.body.removeChild(ghost)
-      }
+        if (ghost.parentNode) {
+            document.body.removeChild(ghost)
+        }
     }, 0)
-  }
+    }
 }
 </script>
 

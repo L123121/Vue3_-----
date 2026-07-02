@@ -52,65 +52,65 @@ const EDITOR_CONTEXT_KEY: InjectionKey<EditorContext> = Symbol('EditorContext')
  * 提供编辑器上下文（在 Editor/index.vue 中调用）
  */
 export function provideEditorContext(): EditorContext {
-  const moveState = reactive<MoveState>({
-    isMoving: false,
-    isDownward: false,
-    isRightward: false,
-  })
+    const moveState = reactive<MoveState>({
+        isMoving: false,
+        isDownward: false,
+        isRightward: false,
+    })
 
-  const hideAreaCallbacks: Array<() => void> = []
-  const runAnimationCallbacks: Array<() => void> = []
-  const stopAnimationCallbacks: Array<() => void> = []
+    const hideAreaCallbacks: Array<() => void> = []
+    const runAnimationCallbacks: Array<() => void> = []
+    const stopAnimationCallbacks: Array<() => void> = []
 
-  const context: EditorContext = {
-    moveState,
+    const context: EditorContext = {
+        moveState,
 
-    startMove(isDownward, isRightward) {
-      moveState.isMoving = true
-      moveState.isDownward = isDownward
-      moveState.isRightward = isRightward
-    },
+        startMove(isDownward, isRightward) {
+            moveState.isMoving = true
+            moveState.isDownward = isDownward
+            moveState.isRightward = isRightward
+        },
 
-    stopMove() {
-      moveState.isMoving = false
-    },
+        stopMove() {
+            moveState.isMoving = false
+        },
 
-    hideArea() {
-      hideAreaCallbacks.forEach(cb => cb())
-    },
+        hideArea() {
+            hideAreaCallbacks.forEach(cb => cb())
+        },
 
-    onHideArea(callback) {
-      hideAreaCallbacks.push(callback)
-    },
+        onHideArea(callback) {
+            hideAreaCallbacks.push(callback)
+        },
 
-    runAnimation() {
-      runAnimationCallbacks.forEach(cb => cb())
-    },
+        runAnimation() {
+            runAnimationCallbacks.forEach(cb => cb())
+        },
 
-    stopAnimation() {
-      stopAnimationCallbacks.forEach(cb => cb())
-    },
+        stopAnimation() {
+            stopAnimationCallbacks.forEach(cb => cb())
+        },
 
-    onRunAnimation(callback) {
-      runAnimationCallbacks.push(callback)
-    },
+        onRunAnimation(callback) {
+            runAnimationCallbacks.push(callback)
+        },
 
-    onStopAnimation(callback) {
-      stopAnimationCallbacks.push(callback)
-    },
-  }
+        onStopAnimation(callback) {
+            stopAnimationCallbacks.push(callback)
+        },
+    }
 
-  provide(EDITOR_CONTEXT_KEY, context)
-  return context
+    provide(EDITOR_CONTEXT_KEY, context)
+    return context
 }
 
 /**
  * 注入编辑器上下文（在子组件中调用）
  */
 export function useEditorContext(): EditorContext {
-  const context = inject(EDITOR_CONTEXT_KEY)
-  if (!context) {
-    throw new Error('useEditorContext() 必须在 provideEditorContext() 的子组件中使用')
-  }
-  return context
+    const context = inject(EDITOR_CONTEXT_KEY)
+    if (!context) {
+        throw new Error('useEditorContext() 必须在 provideEditorContext() 的子组件中使用')
+    }
+    return context
 }

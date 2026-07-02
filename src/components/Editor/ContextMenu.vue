@@ -1,23 +1,45 @@
 <template>
-  <div v-show="menuShow" class="contextmenu" :style="{ top: menuTop + 'px', left: menuLeft + 'px' }">
-    <ul @mouseup="handleMouseUp">
-      <template v-if="curComponent">
-        <template v-if="!curComponent.isLock">
-          <li @click="copy">复制</li>
-          <li @click="paste">粘贴</li>
-          <li @click="cut">剪切</li>
-          <li @click="deleteComponent">删除</li>
-          <li @click="lock">锁定</li>
-          <li @click="topComponent">置顶</li>
-          <li @click="bottomComponent">置底</li>
-          <li @click="upComponent">上移</li>
-          <li @click="downComponent">下移</li>
-        </template>
-        <li v-else @click="unlock">解锁</li>
-      </template>
-      <li v-else @click="paste">粘贴</li>
-    </ul>
-  </div>
+    <div v-show="menuShow" class="contextmenu" :style="{ top: menuTop + 'px', left: menuLeft + 'px' }">
+        <ul @mouseup="handleMouseUp">
+            <template v-if="curComponent">
+                <template v-if="!curComponent.isLock">
+                    <li @click="copy">
+                        复制
+                    </li>
+                    <li @click="paste">
+                        粘贴
+                    </li>
+                    <li @click="cut">
+                        剪切
+                    </li>
+                    <li @click="deleteComponent">
+                        删除
+                    </li>
+                    <li @click="lock">
+                        锁定
+                    </li>
+                    <li @click="topComponent">
+                        置顶
+                    </li>
+                    <li @click="bottomComponent">
+                        置底
+                    </li>
+                    <li @click="upComponent">
+                        上移
+                    </li>
+                    <li @click="downComponent">
+                        下移
+                    </li>
+                </template>
+                <li v-else @click="unlock">
+                    解锁
+                </li>
+            </template>
+            <li v-else @click="paste">
+                粘贴
+            </li>
+        </ul>
+    </div>
 </template>
 
 <script setup lang="ts">
@@ -28,56 +50,56 @@ const store = useStore()
 const { menuTop, menuLeft, menuShow, curComponent } = storeToRefs(store)
 
 function lock(): void {
-  store.lock()
+    store.lock()
 }
 
 function unlock(): void {
-  store.unlock()
+    store.unlock()
 }
 
 // 点击菜单时不取消当前组件的选中状态
 function handleMouseUp(): void {
-  store.setClickComponentStatus(true)
+    store.setClickComponentStatus(true)
 }
 
 function cut(): void {
-  store.cutWithCommand()
+    store.cutWithCommand()
 }
 
 function copy(): void {
-  store.copy()
+    store.copy()
 }
 
 function paste(): void {
-  store.pasteWithCommand(true)
+    store.pasteWithCommand(true)
 }
 
 function deleteComponent(): void {
-  store.deleteComponentWithCommand()
+    store.deleteComponentWithCommand()
 }
 
 function upComponent(): void {
-  if (store.curComponent) {
-    store.layerOperation(store.curComponent.id, 'up')
-  }
+    if (store.curComponent) {
+        store.layerOperation(store.curComponent.id, 'up')
+    }
 }
 
 function downComponent(): void {
-  if (store.curComponent) {
-    store.layerOperation(store.curComponent.id, 'down')
-  }
+    if (store.curComponent) {
+        store.layerOperation(store.curComponent.id, 'down')
+    }
 }
 
 function topComponent(): void {
-  if (store.curComponent) {
-    store.layerOperation(store.curComponent.id, 'top')
-  }
+    if (store.curComponent) {
+        store.layerOperation(store.curComponent.id, 'top')
+    }
 }
 
 function bottomComponent(): void {
-  if (store.curComponent) {
-    store.layerOperation(store.curComponent.id, 'bottom')
-  }
+    if (store.curComponent) {
+        store.layerOperation(store.curComponent.id, 'bottom')
+    }
 }
 </script>
 

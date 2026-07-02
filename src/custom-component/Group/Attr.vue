@@ -1,6 +1,6 @@
 <template>
     <div class="attr-list">
-        <CommonAttr></CommonAttr>
+        <CommonAttr />
     </div>
 </template>
 

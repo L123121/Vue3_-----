@@ -1,5 +1,7 @@
 <template>
-  <button ref="vButton" class="v-button">{{ propValue }}</button>
+    <button ref="vButton" class="v-button">
+        {{ propValue }}
+    </button>
 </template>
 
 <script setup lang="ts">

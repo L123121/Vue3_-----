@@ -19,60 +19,65 @@ export interface EventMap {
   unmove: []
   'v-click': [id: string]
   'v-hover': [id: string]
+  // 协同事件(由 awareness 驱动,供需要响应他人状态的组件订阅)
+  remoteCursorMove: [userId: number, x: number, y: number]
+  remoteCursorLeave: [userId: number]
+  remoteSelection: [userId: number, componentIds: string[]]
+  collabUsersChange: []
 }
 
 type EventName = keyof EventMap
 type EventCallback<T extends EventName> = (...args: EventMap[T]) => void
 
 class EventBus {
-  private events = new Map<string, Array<(...args: unknown[]) => void>>()
+    private events = new Map<string, Array<(...args: unknown[]) => void>>()
 
-  /**
+    /**
    * 订阅事件
    */
-  on<T extends EventName>(event: T, callback: EventCallback<T>): void {
-    const list = this.events.get(event)
-    if (list) {
-      list.push(callback)
-    } else {
-      this.events.set(event, [callback])
+    on<T extends EventName>(event: T, callback: EventCallback<T>): void {
+        const list = this.events.get(event)
+        if (list) {
+            list.push(callback)
+        } else {
+            this.events.set(event, [callback])
+        }
     }
-  }
 
-  /**
+    /**
    * 取消订阅事件
    * 不传 callback 则清空该事件所有监听器
    */
-  off<T extends EventName>(event: T, callback?: EventCallback<T>): void {
-    const list = this.events.get(event)
-    if (!list) return
+    off<T extends EventName>(event: T, callback?: EventCallback<T>): void {
+        const list = this.events.get(event)
+        if (!list) return
 
-    if (!callback) {
-      this.events.set(event, [])
-    } else {
-      this.events.set(event, list.filter(cb => cb !== callback))
+        if (!callback) {
+            this.events.set(event, [])
+        } else {
+            this.events.set(event, list.filter(cb => cb !== callback))
+        }
     }
-  }
 
-  /**
+    /**
    * 触发事件
    */
-  emit<T extends EventName>(event: T, ...args: EventMap[T]): void {
-    const list = this.events.get(event)
-    if (!list) return
-    list.forEach(cb => cb(...args))
-  }
+    emit<T extends EventName>(event: T, ...args: EventMap[T]): void {
+        const list = this.events.get(event)
+        if (!list) return
+        list.forEach(cb => cb(...args))
+    }
 
-  /**
+    /**
    * 一次性订阅事件（触发后自动取消）
    */
-  once<T extends EventName>(event: T, callback: EventCallback<T>): void {
-    const wrapper = (...args: EventMap[T]): void => {
-      this.off(event, wrapper as EventCallback<T>)
-      callback(...args)
+    once<T extends EventName>(event: T, callback: EventCallback<T>): void {
+        const wrapper = (...args: EventMap[T]): void => {
+            this.off(event, wrapper as EventCallback<T>)
+            callback(...args)
+        }
+        this.on(event, wrapper as EventCallback<T>)
     }
-    this.on(event, wrapper as EventCallback<T>)
-  }
 }
 
 export default new EventBus()

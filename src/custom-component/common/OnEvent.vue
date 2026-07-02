@@ -24,7 +24,7 @@ export default {
             this.$el.style.transition = `all ${duration}s`
         }
     },
-    beforeDestroy() {
+    beforeUnmount() {
         if (this.linkage?.data?.length) {
             eventBus.$off('v-click', this.onClick)
             eventBus.$off('v-hover', this.onHover)

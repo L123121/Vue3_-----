@@ -7,26 +7,26 @@ import type { ComponentStyle } from '@/types'
  * 注意：降级路径仅处理普通对象和数组，不支持 Map/Set/Date 等特殊类型
  */
 export function deepCopy<T>(target: T): T {
-  if (target === null || typeof target !== 'object') {
-    return target
-  }
+    if (target === null || typeof target !== 'object') {
+        return target
+    }
 
-  try {
-    return structuredClone(target)
-  } catch {
+    try {
+        return structuredClone(target)
+    } catch {
     // 降级：仅处理普通对象和数组（适用于包含函数或 DOM 节点的场景）
-    if (Array.isArray(target)) {
-      return target.map(item => deepCopy(item)) as T
-    }
+        if (Array.isArray(target)) {
+            return target.map(item => deepCopy(item)) as T
+        }
 
-    const result = {} as T
-    for (const key in target) {
-      if (Object.prototype.hasOwnProperty.call(target, key)) {
-        result[key] = deepCopy(target[key])
-      }
+        const result = {} as T
+        for (const key in target) {
+            if (Object.prototype.hasOwnProperty.call(target, key)) {
+                result[key] = deepCopy(target[key])
+            }
+        }
+        return result
     }
-    return result
-  }
 }
 
 /**
@@ -36,9 +36,9 @@ export function deepCopy<T>(target: T): T {
  * @param j 第二个索引
  */
 export function swap<T>(arr: T[], i: number, j: number): void {
-  const temp = arr[i]
-  arr[i] = arr[j]
-  arr[j] = temp
+    const temp = arr[i]
+    arr[i] = arr[j]
+    arr[j] = temp
 }
 
 /**
@@ -47,7 +47,7 @@ export function swap<T>(arr: T[], i: number, j: number): void {
  * @returns 匹配的元素或 null
  */
 export function $<T extends Element = Element>(selector: string): T | null {
-  return document.querySelector<T>(selector)
+    return document.querySelector<T>(selector)
 }
 
 /**
@@ -61,5 +61,5 @@ const components = ['VText', 'RectShape', 'CircleShape'] as const
  * @returns 是否阻止拖放
  */
 export function isPreventDrop(component: string): boolean {
-  return !components.includes(component as typeof components[number]) && !component.startsWith('SVG')
+    return !components.includes(component as typeof components[number]) && !component.startsWith('SVG')
 }

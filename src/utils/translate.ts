@@ -15,7 +15,7 @@ interface Point {
  * @returns 弧度值
  */
 function angleToRadian(angle: number): number {
-  return (angle * Math.PI) / 180
+    return (angle * Math.PI) / 180
 }
 
 /**
@@ -27,11 +27,11 @@ function angleToRadian(angle: number): number {
  * @see https://www.zhihu.com/question/67425734/answer/252724399 旋转矩阵公式
  */
 export function calculateRotatedPointCoordinate(
-  point: Point,
-  center: Point,
-  rotate: number
+    point: Point,
+    center: Point,
+    rotate: number,
 ): Point {
-  /**
+    /**
    * 旋转公式：
    *  点a(x, y)
    *  旋转中心c(x, y)
@@ -40,17 +40,17 @@ export function calculateRotatedPointCoordinate(
    * nx = cosθ * (ax - cx) - sinθ * (ay - cy) + cx
    * ny = sinθ * (ax - cx) + cosθ * (ay - cy) + cy
    */
-  const radian = angleToRadian(rotate)
-  return {
-    x:
+    const radian = angleToRadian(rotate)
+    return {
+        x:
       (point.x - center.x) * Math.cos(radian) -
       (point.y - center.y) * Math.sin(radian) +
       center.x,
-    y:
+        y:
       (point.x - center.x) * Math.sin(radian) +
       (point.y - center.y) * Math.cos(radian) +
       center.y,
-  }
+    }
 }
 
 /**
@@ -66,65 +66,65 @@ type PointName = 't' | 'b' | 'l' | 'r' | 'lt' | 'rt' | 'lb' | 'rb'
  * @returns 旋转后的点坐标
  */
 export function getRotatedPointCoordinate(
-  style: Required<Pick<ComponentStyle, 'left' | 'top' | 'width' | 'height' | 'rotate'>>,
-  center: Point,
-  name: PointName
+    style: Required<Pick<ComponentStyle, 'left' | 'top' | 'width' | 'height' | 'rotate'>>,
+    center: Point,
+    name: PointName,
 ): Point {
-  let point: Point
+    let point: Point
 
-  switch (name) {
-    case 't': // 上中
-      point = {
-        x: style.left + style.width / 2,
-        y: style.top,
-      }
-      break
-    case 'b': // 下中
-      point = {
-        x: style.left + style.width / 2,
-        y: style.top + style.height,
-      }
-      break
-    case 'l': // 左中
-      point = {
-        x: style.left,
-        y: style.top + style.height / 2,
-      }
-      break
-    case 'r': // 右中
-      point = {
-        x: style.left + style.width,
-        y: style.top + style.height / 2,
-      }
-      break
-    case 'lt': // 左上
-      point = {
-        x: style.left,
-        y: style.top,
-      }
-      break
-    case 'rt': // 右上
-      point = {
-        x: style.left + style.width,
-        y: style.top,
-      }
-      break
-    case 'lb': // 左下
-      point = {
-        x: style.left,
-        y: style.top + style.height,
-      }
-      break
-    case 'rb': // 右下
-    default:
-      point = {
-        x: style.left + style.width,
-        y: style.top + style.height,
-      }
-      break
-  }
+    switch (name) {
+        case 't': // 上中
+            point = {
+                x: style.left + style.width / 2,
+                y: style.top,
+            }
+            break
+        case 'b': // 下中
+            point = {
+                x: style.left + style.width / 2,
+                y: style.top + style.height,
+            }
+            break
+        case 'l': // 左中
+            point = {
+                x: style.left,
+                y: style.top + style.height / 2,
+            }
+            break
+        case 'r': // 右中
+            point = {
+                x: style.left + style.width,
+                y: style.top + style.height / 2,
+            }
+            break
+        case 'lt': // 左上
+            point = {
+                x: style.left,
+                y: style.top,
+            }
+            break
+        case 'rt': // 右上
+            point = {
+                x: style.left + style.width,
+                y: style.top,
+            }
+            break
+        case 'lb': // 左下
+            point = {
+                x: style.left,
+                y: style.top + style.height,
+            }
+            break
+        case 'rb': // 右下
+        default:
+            point = {
+                x: style.left + style.width,
+                y: style.top + style.height,
+            }
+            break
+    }
 
-  return calculateRotatedPointCoordinate(point, center, style.rotate)
+    return calculateRotatedPointCoordinate(point, center, style.rotate)
 }
 
 /**
@@ -134,10 +134,10 @@ export function getRotatedPointCoordinate(
  * @returns 中点坐标
  */
 export function getCenterPoint(p1: Point, p2: Point): Point {
-  return {
-    x: p1.x + (p2.x - p1.x) / 2,
-    y: p1.y + (p2.y - p1.y) / 2,
-  }
+    return {
+        x: p1.x + (p2.x - p1.x) / 2,
+        y: p1.y + (p2.y - p1.y) / 2,
+    }
 }
 
 /**
@@ -146,7 +146,7 @@ export function getCenterPoint(p1: Point, p2: Point): Point {
  * @returns 正弦值
  */
 export function sin(rotate: number): number {
-  return Math.abs(Math.sin(angleToRadian(rotate)))
+    return Math.abs(Math.sin(angleToRadian(rotate)))
 }
 
 /**
@@ -155,7 +155,7 @@ export function sin(rotate: number): number {
  * @returns 余弦值
  */
 export function cos(rotate: number): number {
-  return Math.abs(Math.cos(angleToRadian(rotate)))
+    return Math.abs(Math.cos(angleToRadian(rotate)))
 }
 
 /**
@@ -164,7 +164,7 @@ export function cos(rotate: number): number {
  * @returns 标准化后的角度
  */
 export function mod360(deg: number): number {
-  return (deg + 360) % 360
+    return (deg + 360) % 360
 }
 
 /**
@@ -173,8 +173,8 @@ export function mod360(deg: number): number {
  * @returns 缩放后的值
  */
 export function changeStyleWithScale(value: number): number {
-  const store = useStore()
-  return value * (store.canvasStyleData.scale / 100)
+    const store = useStore()
+    return value * (store.canvasStyleData.scale / 100)
 }
 
 /**
@@ -183,5 +183,5 @@ export function changeStyleWithScale(value: number): number {
  * @returns 百分比字符串
  */
 export function toPercent(val: number): string {
-  return val * 100 + '%'
+    return val * 100 + '%'
 }

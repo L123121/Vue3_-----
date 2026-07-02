@@ -1,51 +1,80 @@
-import { BaseCommand } from './BaseCommand'
-import { CommandType } from './types'
+import { BaseCommand, getContext } from './BaseCommand'
+import { CommandType, type CommandEnvelope } from './types'
+import { register } from './registry'
 import type { ComponentData, CanvasStyleData } from '@/types'
-import { useStore } from '@/store'
+import { nanoid } from 'nanoid'
+
+interface ImportData {
+    newComponentData: ComponentData[]
+    newCanvasStyle?: CanvasStyleData
+    backupComponentData: ComponentData[]
+    backupCanvasStyle: CanvasStyleData | null
+}
 
 /**
  * 导入数据命令
  */
 export class ImportDataCommand extends BaseCommand {
-  type = CommandType.IMPORT_DATA
-  description = '导入数据'
-  mergeable = false
+    type = CommandType.IMPORT_DATA
+    description = '导入数据'
+    mergeable = false
 
-  private backupComponentData: ComponentData[] = []
-  private backupCanvasStyle: CanvasStyleData | null = null
+    private importData: ImportData
 
-  constructor(
-    private newComponentData: ComponentData[],
-    private newCanvasStyle?: CanvasStyleData
-  ) {
-    super()
-    this.data = {
-      componentCount: newComponentData.length,
-      hasCanvasStyle: Boolean(newCanvasStyle),
-    }
-  }
-
-  execute(): void {
-    const store = useStore()
-
-    // 浅拷贝数组 + 样式浅拷贝，未变化对象保持共享
-    this.backupComponentData = store.componentData.slice()
-    this.backupCanvasStyle = { ...store.canvasStyleData }
-
-    store.componentData = this.newComponentData.slice()
-    if (this.newCanvasStyle) {
-      store.canvasStyleData = { ...this.newCanvasStyle }
+    constructor(newComponentData: ComponentData[], newCanvasStyle?: CanvasStyleData) {
+        super()
+        this.id = nanoid()
+        this.importData = {
+            newComponentData: newComponentData.map(c => structuredClone(c)),
+            newCanvasStyle: newCanvasStyle ? { ...newCanvasStyle } : undefined,
+            backupComponentData: [],
+            backupCanvasStyle: null,
+        }
+        this.data = this.importData as unknown as Record<string, unknown>
     }
 
-    store.curComponent = null
-    store.curComponentIndex = null
-  }
+    execute(): void {
+        const ctx = getContext()
 
-  undo(): void {
-    const store = useStore()
-    store.componentData = this.backupComponentData.slice()
-    if (this.backupCanvasStyle) {
-      store.canvasStyleData = { ...this.backupCanvasStyle }
+        this.importData.backupComponentData = ctx.getAll().map(c => structuredClone(c))
+        this.importData.backupCanvasStyle = { ...ctx.getCanvas() }
+
+        ctx.replaceAll(this.importData.newComponentData.map(c => structuredClone(c)))
+        if (this.importData.newCanvasStyle) {
+            ctx.setCanvas(this.importData.newCanvasStyle)
+        }
+
+        ctx.setCurComponent(null)
+        this.data = { ...this.importData } as unknown as Record<string, unknown>
     }
-  }
+
+    undo(): void {
+        const ctx = getContext()
+        ctx.replaceAll(this.importData.backupComponentData.map(c => structuredClone(c)))
+        if (this.importData.backupCanvasStyle) {
+            ctx.setCanvas(this.importData.backupCanvasStyle)
+        }
+    }
+
+    canMergeWith(): boolean {
+        return false
+    }
+
+    merge(other: import('./types').Command): import('./types').Command {
+        return other
+    }
 }
+
+register(CommandType.IMPORT_DATA, (env: CommandEnvelope) => {
+    const d = env.data as unknown as ImportData
+    const cmd = new ImportDataCommand(d.newComponentData, d.newCanvasStyle)
+    cmd.id = env.id
+    ;(cmd as unknown as { importData: ImportData }).importData = {
+        newComponentData: (d.newComponentData ?? []).map(c => structuredClone(c)),
+        newCanvasStyle: d.newCanvasStyle ? { ...d.newCanvasStyle } : undefined,
+        backupComponentData: (d.backupComponentData ?? []).map(c => structuredClone(c)),
+        backupCanvasStyle: d.backupCanvasStyle ? { ...d.backupCanvasStyle } : null,
+    }
+    cmd.data = (cmd as unknown as { importData: ImportData }).importData as unknown as Record<string, unknown>
+    return cmd
+})

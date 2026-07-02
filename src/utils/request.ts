@@ -19,26 +19,26 @@ interface RequestOptions extends RequestConfig {
  * @returns Promise 响应数据
  */
 function request(options: RequestOptions): Promise<unknown> {
-  return new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest()
-    xhr.timeout = 6000
+    return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest()
+        xhr.timeout = 6000
 
-    let url = getURL(options.url)
-    if (options.method === 'GET') {
-      url += getURLParam(options.data)
-    }
+        let url = getURL(options.url)
+        if (options.method === 'GET') {
+            url += getURLParam(options.data)
+        }
 
-    xhr.open(options.method, url)
+        xhr.open(options.method, url)
 
-    xhr.ontimeout = () => reject(new Error('请求超时'))
-    xhr.onerror = () => reject(new Error('请求失败'))
-    xhr.onload = e => {
-      const target = e.target as XMLHttpRequest
-      resolve(target.response)
-    }
+        xhr.ontimeout = () => reject(new Error('请求超时'))
+        xhr.onerror = () => reject(new Error('请求失败'))
+        xhr.onload = e => {
+            const target = e.target as XMLHttpRequest
+            resolve(target.response)
+        }
 
-    xhr.send(JSON.stringify(getURLData(options.data, options.paramType)))
-  })
+        xhr.send(JSON.stringify(getURLData(options.data, options.paramType)))
+    })
 }
 
 /**
@@ -47,15 +47,15 @@ function request(options: RequestOptions): Promise<unknown> {
  * @returns 查询字符串
  */
 function getURLParam(data: Record<string, unknown>[]): string {
-  let result = ''
-  data.forEach(item => {
-    const [key, value] = Object.entries(item)[0] || []
-    if (key) {
-      result += `&${key}=${value}`
-    }
-  })
+    let result = ''
+    data.forEach(item => {
+        const [key, value] = Object.entries(item)[0] || []
+        if (key) {
+            result += `&${key}=${value}`
+        }
+    })
 
-  return result ? '?' + result : ''
+    return result ? '?' + result : ''
 }
 
 /**
@@ -65,24 +65,24 @@ function getURLParam(data: Record<string, unknown>[]): string {
  * @returns 格式化后的数据
  */
 function getURLData(
-  data: Record<string, unknown>[],
-  paramType?: string
+    data: Record<string, unknown>[],
+    paramType?: string,
 ): Record<string, unknown>[] | Record<string, unknown> | string {
-  if (!data) return ''
+    if (!data) return ''
 
-  if (paramType === 'array') {
-    return data
-  }
-
-  const result: Record<string, unknown> = {}
-  data.forEach(item => {
-    const [key, value] = Object.entries(item)[0] || []
-    if (key) {
-      result[key] = value
+    if (paramType === 'array') {
+        return data
     }
-  })
 
-  return result
+    const result: Record<string, unknown> = {}
+    data.forEach(item => {
+        const [key, value] = Object.entries(item)[0] || []
+        if (key) {
+            result[key] = value
+        }
+    })
+
+    return result
 }
 
 /**
@@ -91,7 +91,7 @@ function getURLData(
  * @returns 完整 URL
  */
 export function getURL(url: string): string {
-  return url.startsWith('http') ? url : 'https://' + url
+    return url.startsWith('http') ? url : 'https://' + url
 }
 
 /**
@@ -103,51 +103,51 @@ export function getURL(url: string): string {
  * @returns 取消请求的函数
  */
 export default function requestWrapper(
-  options: RequestOptions,
-  obj: Record<string, unknown>,
-  key: string,
-  responseType: 'object' | 'array' | 'string' = 'object'
+    options: RequestOptions,
+    obj: Record<string, unknown>,
+    key: string,
+    responseType: 'object' | 'array' | 'string' = 'object',
 ): () => void {
-  let count = 0
-  let timer: ReturnType<typeof setInterval> | undefined
+    let count = 0
+    let timer: ReturnType<typeof setInterval> | undefined
 
-  const url = options?.url
+    const url = options?.url
 
-  if ((url && !/^\d+$/.test(url)) || urlRE.test(getURL(url))) {
-    if (!options.series) {
-      request(options)
-        .then(data => {
-          if (responseType === 'object' || responseType === 'array') {
-            obj[key] = JSON.parse(data as string)
-          } else {
-            obj[key] = data
-          }
-        })
-        .catch(err => ElMessage.error(err?.message || String(err)))
-    } else {
-      timer = setInterval(() => {
-        if (options.requestCount !== 0 && options.requestCount <= count) {
-          clearInterval(timer)
-          return
+    if ((url && !/^\d+$/.test(url)) || urlRE.test(getURL(url))) {
+        if (!options.series) {
+            request(options)
+                .then(data => {
+                    if (responseType === 'object' || responseType === 'array') {
+                        obj[key] = JSON.parse(data as string)
+                    } else {
+                        obj[key] = data
+                    }
+                })
+                .catch(err => ElMessage.error(err?.message || String(err)))
+        } else {
+            timer = setInterval(() => {
+                if (options.requestCount !== 0 && options.requestCount <= count) {
+                    clearInterval(timer)
+                    return
+                }
+
+                count++
+                request(options)
+                    .then(data => {
+                        if (responseType === 'object' || responseType === 'array') {
+                            obj[key] = JSON.parse(data as string)
+                        } else {
+                            obj[key] = data
+                        }
+                    })
+                    .catch(err => ElMessage.error(err?.message || String(err)))
+            }, options.time)
         }
-
-        count++
-        request(options)
-          .then(data => {
-            if (responseType === 'object' || responseType === 'array') {
-              obj[key] = JSON.parse(data as string)
-            } else {
-              obj[key] = data
-            }
-          })
-          .catch(err => ElMessage.error(err?.message || String(err)))
-      }, options.time)
     }
-  }
 
-  return function cancelRequest() {
-    if (timer) {
-      clearInterval(timer)
+    return function cancelRequest() {
+        if (timer) {
+            clearInterval(timer)
+        }
     }
-  }
 }

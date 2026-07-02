@@ -1,10 +1,10 @@
 <template>
-  <el-input
-    :model-value="modelValue"
-    size="small"
-    :placeholder="config?.placeholder ?? ''"
-    @update:model-value="$emit('update:modelValue', $event)"
-  />
+    <el-input
+        :model-value="modelValue"
+        size="small"
+        :placeholder="config?.placeholder ?? ''"
+        @update:model-value="$emit('update:modelValue', $event)"
+    />
 </template>
 
 <script setup lang="ts">

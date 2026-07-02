@@ -14,17 +14,25 @@
                             v-model="tableData[row][col]"
                             v-focus
                             @blur="onBlur"
-                        ></el-input>
+                        />
                         <span v-else>{{ e }}</span>
                     </td>
                 </tr>
             </tbody>
         </table>
         <div>
-            <button @click="addRow">添加新行</button>
-            <button @click="addCol">添加新列</button>
-            <button @click="deleteRow">删除行</button>
-            <button @click="deleteCol">删除列</button>
+            <button @click="addRow">
+                添加新行
+            </button>
+            <button @click="addCol">
+                添加新列
+            </button>
+            <button @click="deleteRow">
+                删除行
+            </button>
+            <button @click="deleteCol">
+                删除列
+            </button>
         </div>
     </div>
 </template>

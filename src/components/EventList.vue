@@ -1,7 +1,9 @@
 <template>
     <div class="event-list">
         <div class="div-events">
-            <el-button class="add-btn" type="primary" @click="isShowEvent = true">添加事件</el-button>
+            <el-button class="add-btn" type="primary" @click="isShowEvent = true">
+                添加事件
+            </el-button>
             <div class="event-tags">
                 <el-tag
                     v-for="event in Object.keys(curComponent.events)"
@@ -21,7 +23,9 @@
         <!-- 选择事件 -->
         <Modal v-model="isShowEvent">
             <div class="event-modal-content">
-                <h3 class="modal-title">添加事件</h3>
+                <h3 class="modal-title">
+                    添加事件
+                </h3>
                 <el-tabs v-model="eventActiveName" type="border-card">
                     <el-tab-pane
                         v-for="item in eventList"
@@ -47,7 +51,9 @@
                                 @keydown.stop
                             />
                             <div class="btn-container">
-                                <el-button type="primary" @click="addEvent(item.key, item.param)">确定</el-button>
+                                <el-button type="primary" @click="addEvent(item.key, item.param)">
+                                    确定
+                                </el-button>
                             </div>
                         </div>
                     </el-tab-pane>
@@ -71,12 +77,12 @@ const isShowEvent = ref(false)
 const eventActiveName = ref('redirect')
 
 function addEvent(event: string, param: string): void {
-  isShowEvent.value = false
-  store.addEvent({ event, param })
+    isShowEvent.value = false
+    store.addEvent({ event, param })
 }
 
 function removeEvent(event: string): void {
-  store.removeEvent(event)
+    store.removeEvent(event)
 }
 </script>
 

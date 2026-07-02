@@ -1,11 +1,11 @@
 <template>
-  <div ref="rectRef" class="rect-shape" :class="{ 'has-children': hasChildren }">
-    <!-- 容器内容 -->
-    <VText :prop-value="element.propValue" :element="element" />
+    <div ref="rectRef" class="rect-shape" :class="{ 'has-children': hasChildren }">
+        <!-- 容器内容 -->
+        <VText :prop-value="element.propValue" :element="element" />
 
-    <!-- 子组件插槽：由 NodeRenderer 根据 parentId 递归注入 -->
-    <slot />
-  </div>
+        <!-- 子组件插槽：由 NodeRenderer 根据 parentId 递归注入 -->
+        <slot />
+    </div>
 </template>
 
 <script setup lang="ts">
@@ -27,7 +27,7 @@ const rectRef = ref<HTMLElement | null>(null)
 
 // 检测当前组件是否有子组件（用于 CSS 样式适配）
 const hasChildren = computed(() => {
-  return store.componentData.some(c => c.parentId === props.element.id)
+    return store.componentData.some(c => c.parentId === props.element.id)
 })
 
 useOnEvent(props, rectRef)

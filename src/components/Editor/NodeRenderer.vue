@@ -1,72 +1,72 @@
 <template>
-  <Shape
-    :default-style="node.style"
-    :style="{ ...getShapeStyle(node.style), zIndex: node.zIndex }"
-    :active="node.id === curComponent?.id"
-    :element="node"
-    :index="index"
-    :class="{ lock: node.isLock }"
-  >
-    <!-- SVG 组件 -->
-    <component
-      :is="node.component"
-      v-if="node.component.startsWith('SVG')"
-      :id="'component' + node.id"
-      :style="getSVGStyle(node.style)"
-      class="component"
-      :prop-value="node.propValue"
-      :element="node"
-      :request="node.request"
-      :linkage="node.linkage"
+    <Shape
+        :default-style="node.style"
+        :style="{ ...getShapeStyle(node.style), zIndex: node.zIndex }"
+        :active="node.id === curComponent?.id"
+        :element="node"
+        :index="index"
+        :class="{ lock: node.isLock }"
     >
-      <!-- 子组件通过插槽注入 -->
-      <template v-if="children.length">
-        <NodeRenderer
-          v-for="child in children"
-          :key="child.id"
-          :node="child"
-          :index="getIndex(child.id)"
-        />
-      </template>
-    </component>
+        <!-- SVG 组件 -->
+        <component
+            :is="node.component"
+            v-if="node.component.startsWith('SVG')"
+            :id="'component' + node.id"
+            :style="getSVGStyle(node.style)"
+            class="component"
+            :prop-value="node.propValue"
+            :element="node"
+            :request="node.request"
+            :linkage="node.linkage"
+        >
+            <!-- 子组件通过插槽注入 -->
+            <template v-if="children.length">
+                <NodeRenderer
+                    v-for="child in children"
+                    :key="child.id"
+                    :node="child"
+                    :index="getIndex(child.id)"
+                />
+            </template>
+        </component>
 
-    <!-- 非 VText 组件（含容器） -->
-    <component
-      :is="node.component"
-      v-else-if="node.component !== 'VText'"
-      :id="'component' + node.id"
-      class="component"
-      :style="getComponentStyle(node.style)"
-      :prop-value="node.propValue"
-      :element="node"
-      :request="node.request"
-      :linkage="node.linkage"
-    >
-      <!-- 子组件通过插槽注入 -->
-      <template v-if="children.length">
-        <NodeRenderer
-          v-for="child in children"
-          :key="child.id"
-          :node="child"
-          :index="getIndex(child.id)"
-        />
-      </template>
-    </component>
+        <!-- 非 VText 组件（含容器） -->
+        <component
+            :is="node.component"
+            v-else-if="node.component !== 'VText'"
+            :id="'component' + node.id"
+            class="component"
+            :style="getComponentStyle(node.style)"
+            :prop-value="node.propValue"
+            :element="node"
+            :request="node.request"
+            :linkage="node.linkage"
+        >
+            <!-- 子组件通过插槽注入 -->
+            <template v-if="children.length">
+                <NodeRenderer
+                    v-for="child in children"
+                    :key="child.id"
+                    :node="child"
+                    :index="getIndex(child.id)"
+                />
+            </template>
+        </component>
 
-    <!-- VText 组件（带 input 事件） -->
-    <component
-      :is="node.component"
-      v-else
-      :id="'component' + node.id"
-      class="component"
-      :style="getComponentStyle(node.style)"
-      :prop-value="node.propValue"
-      :element="node"
-      :request="node.request"
-      :linkage="node.linkage"
-      @input="handleInput"
-    />
-  </Shape>
+        <!-- VText 组件（带 input 事件） -->
+        <component
+            :is="node.component"
+            v-else
+            :id="'component' + node.id"
+            class="component"
+            :style="getComponentStyle(node.style)"
+            :prop-value="node.propValue"
+            :element="node"
+            :request="node.request"
+            :linkage="node.linkage"
+            @input="handleInput"
+        />
+    </Shape>
 </template>
 
 <script setup lang="ts">
@@ -75,10 +75,10 @@ import { useStore } from '@/store'
 import { storeToRefs } from 'pinia'
 import Shape from './Shape.vue'
 import {
-  getShapeStyle as getShapeStyleUtils,
-  getComponentRotatedStyle,
-  getSVGStyle as getSVGStyleUtils,
-  getStyle,
+    getShapeStyle as getShapeStyleUtils,
+    getComponentRotatedStyle,
+    getSVGStyle as getSVGStyleUtils,
+    getStyle,
 } from '@/utils/style'
 import { changeStyleWithScale } from '@/utils/translate'
 import type { ComponentData, ComponentStyle } from '@/types'
@@ -98,40 +98,41 @@ const svgFilterAttrs: (keyof ComponentStyle)[] = ['width', 'height', 'top', 'lef
  * 查找当前组件的所有子组件（parentId 等于当前节点 id）
  */
 const children = computed<ComponentData[]>(() => {
-  return componentData.value.filter(c => c.parentId === props.node.id)
+    return componentData.value.filter(c => c.parentId === props.node.id)
 })
 
 /**
  * 获取组件在扁平数组中的索引（用于选中状态同步）
  */
 function getIndex(id: string): number {
-  return componentData.value.findIndex(c => c.id === id)
+    return componentData.value.findIndex(c => c.id === id)
 }
 
 function getShapeStyle(style: ComponentStyle): Record<string, string | number> {
-  return getShapeStyleUtils(style)
+    return getShapeStyleUtils(style)
 }
 
 function getComponentStyle(style: ComponentStyle): Record<string, string | number> {
-  return getStyle(style, svgFilterAttrs)
+    return getStyle(style, svgFilterAttrs)
 }
 
 function getSVGStyle(style: ComponentStyle): Record<string, string | number> {
-  return getSVGStyleUtils(style, svgFilterAttrs)
+    return getSVGStyleUtils(style, svgFilterAttrs)
 }
 
 function handleInput(element: ComponentData, value: string): void {
-  store.setShapeStyle({ height: getTextareaHeight(element, value) })
+    store.setShapeStyle({ height: getTextareaHeight(element, value) })
 }
 
 function getTextareaHeight(element: ComponentData, text: string): number {
-  let { lineHeight, fontSize, height } = element.style
-  if (lineHeight === '' || lineHeight === undefined) {
-    lineHeight = 1.5
-  }
+    let { lineHeight } = element.style
+    const { fontSize, height } = element.style
+    if (lineHeight === '' || lineHeight === undefined) {
+        lineHeight = 1.5
+    }
 
-  const newHeight =
+    const newHeight =
     (text.split('<br>').length - 1) * (lineHeight as number) * (fontSize || canvasStyleData.value.fontSize)
-  return height > newHeight ? height : newHeight
+    return height > newHeight ? height : newHeight
 }
 </script>

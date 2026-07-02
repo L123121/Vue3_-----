@@ -1,42 +1,63 @@
-import { BaseCommand } from './BaseCommand'
-import { CommandType } from './types'
+import { BaseCommand, getContext } from './BaseCommand'
+import { CommandType, type CommandEnvelope } from './types'
+import { register } from './registry'
 import type { ComponentData } from '@/types'
-import { useStore } from '@/store'
+import { nanoid } from 'nanoid'
+
+interface AddData {
+    component: ComponentData
+    index?: number
+}
 
 /**
  * 新增组件命令
  */
 export class AddComponentCommand extends BaseCommand {
-  type = CommandType.ADD_COMPONENT
-  description = '添加组件'
-  mergeable = false
+    type = CommandType.ADD_COMPONENT
+    description = '添加组件'
+    mergeable = false
 
-  constructor(
-    private component: ComponentData,
-    private index?: number
-  ) {
-    super()
-  }
+    private addData: AddData
 
-  execute(): void {
-    const store = useStore()
-    if (this.index !== undefined) {
-      store.componentData.splice(this.index, 0, this.component)
-    } else {
-      store.componentData.push(this.component)
+    constructor(component: ComponentData, index?: number) {
+        super()
+        this.id = nanoid()
+        this.addData = {
+            component: structuredClone(component),
+            index,
+        }
+        this.data = this.addData as unknown as Record<string, unknown>
     }
-  }
 
-  undo(): void {
-    const store = useStore()
-    const idx = store.componentData.findIndex(c => c.id === this.component.id)
-    if (idx !== -1) {
-      store.componentData.splice(idx, 1)
-      // 恢复当前组件状态
-      if (store.curComponent?.id === this.component.id) {
-        store.curComponent = null
-        store.curComponentIndex = null
-      }
+    execute(): void {
+        const ctx = getContext()
+        if (this.addData.index !== undefined) {
+            ctx.insert(this.addData.component, this.addData.index)
+        } else {
+            ctx.insert(this.addData.component)
+        }
     }
-  }
+
+    undo(): void {
+        const ctx = getContext()
+        ctx.remove(this.addData.component.id)
+        if (ctx.curComponent?.id === this.addData.component.id) {
+            ctx.setCurComponent(null)
+        }
+    }
+
+    canMergeWith(): boolean {
+        return false
+    }
+
+    merge(other: import('./types').Command): import('./types').Command {
+        return other
+    }
 }
+
+register(CommandType.ADD_COMPONENT, (env: CommandEnvelope) => {
+    const d = env.data as unknown as AddData
+    const cmd = new AddComponentCommand(d.component, d.index)
+    cmd.id = env.id
+    return cmd
+})

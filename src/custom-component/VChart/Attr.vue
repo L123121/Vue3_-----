@@ -1,39 +1,34 @@
 <template>
     <div class="attr">
-        <CommonAttr></CommonAttr>
+        <CommonAttr />
         <el-form>
             <el-form-item label="标题">
                 <el-switch
                     v-model="option.title.show"
                     active-text="显示标题"
-                >
-                </el-switch>
+                />
                 <el-input
                     v-model="option.title.text"
                     placeholder="请输入内容"
-                >
-                </el-input>
+                />
             </el-form-item>
             <el-form-item label="工具提示">
                 <el-switch
                     v-model="option.tooltip.show"
                     active-text="显示提示"
-                >
-                </el-switch>
+                />
             </el-form-item>
             <el-form-item label="图例">
                 <el-switch
                     v-model="option.legend.show"
                     active-text="显示图例"
-                >
-                </el-switch>
+                />
             </el-form-item>
             <el-form-item label="横坐标">
                 <el-switch
                     v-model="option.xAxis.show"
                     active-text="显示横坐标"
-                >
-                </el-switch>
+                />
             </el-form-item>
             <el-form-item>
                 <el-dropdown>
@@ -53,16 +48,18 @@
                 </el-dropdown>
             </el-form-item>
             <el-form-item label="静态数据源">
-                <el-button @click="openStaticWinbox">修改数据</el-button>
+                <el-button @click="openStaticWinbox">
+                    修改数据
+                </el-button>
             </el-form-item>
         </el-form>
 
         <el-dialog
-            title="数据修改"
             v-model="dialogVisible"
+            title="数据修改"
             width="75%"
         >
-            <div ref="aceRef" class="ace"></div>
+            <div ref="aceRef" class="ace" />
             <template #footer>
                 <span class="dialog-footer">
                     <el-button type="primary" @click="updatedata">更新数据</el-button>
@@ -123,8 +120,8 @@ function openStaticWinbox() {
             enableSnippets: true,
         })
         // 初始化图表数据在editor中
-        let data = JSON.stringify(curComponent.value.propValue.option.series.data)
-        let xAxis = JSON.stringify(curComponent.value.propValue.option.xAxis.data)
+        const data = JSON.stringify(curComponent.value.propValue.option.series.data)
+        const xAxis = JSON.stringify(curComponent.value.propValue.option.xAxis.data)
         editor.setValue(data + '\n' + xAxis)
     })
 }
@@ -134,9 +131,9 @@ function findstring(str, ch1, ch2) {
 }
 
 function updatedata() {
-    let str = editor.getValue()
-    let Arrdata = findstring(str, '[', ']')
-    let ArrXAxis = findstring(str.substr(str.indexOf(']') + 1), '[', ']')
+    const str = editor.getValue()
+    const Arrdata = findstring(str, '[', ']')
+    const ArrXAxis = findstring(str.substr(str.indexOf(']') + 1), '[', ']')
     curComponent.value.propValue.option.series.data = JSON.parse(Arrdata)
     curComponent.value.propValue.option.xAxis.data = JSON.parse(ArrXAxis)
     ElMessage.success('更新成功')

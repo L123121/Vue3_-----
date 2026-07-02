@@ -125,7 +125,9 @@
 
 这是本系统的核心设计思想：**页面不是 DOM，而是一棵 JSON 树**。
 
-采用**扁平数组 + parentId 的数据结构**描述页面与组件关系，通过 TypeScript 接口与枚举约束组件属性与交互行为，保障系统的类型安全与可扩展性。
+采用**扁平数组 + parentId** 作为主要数据结构描述页面与组件的层级关系（`componentData` 是一维数组，每个组件用 `parentId` 指向父组件，`null` 表示根级组件），通过 TypeScript 接口与枚举约束组件属性与交互行为，保障系统的类型安全与可扩展性。
+
+> **关于组合组件 Group**：作为扁平结构的特例，`Group` 组件的 `propValue` 是一个 `ComponentData[]` 嵌套数组，用于在组合时保存子组件的快照。这是一种"主结构扁平、组合节点局部嵌套"的混合模型——日常渲染与图层管理走扁平数组 + parentId，组合/拆分操作通过 Group 的 `propValue` 嵌套数组承载子组件。拆分（Decompose）时子组件会被重新摊平回主数组并恢复各自的 parentId。
 
 ```typescript
 // 页面数据结构示例
@@ -293,7 +295,7 @@ function handleMouseDownOnShape(e: MouseEvent): void {
 | **Vue Router** | 4.x | 路由管理，支持多页面编辑切换 |
 | **Element Plus** | 2.x | UI 组件库，用于属性面板和侧边栏 |
 | **Vite** | 4.x | 构建工具，极速的热更新体验 |
-| **Zod** | 3.x | 运行时数据校验，校验导入的 JSON 数据结构 |
+| **Zod** | 4.x | 运行时数据校验，校验导入的 JSON 数据结构 |
 | **ECharts** | 5.x | 数据可视化支持 |
 | **Animate.css** | - | 提供丰富的预置动画效果 |
 | **Ace Editor** | 1.x | 代码编辑器，用于 JSON 数据编辑 |

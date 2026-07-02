@@ -6,17 +6,29 @@
                 <!-- 数据 -->
                 <div class="btn-group">
                     <span class="group-label">数据</span>
-                    <el-button @click="onAceEditorChange" :icon="Edit" size="small">JSON</el-button>
-                    <el-button @click="onImportJSON" :icon="Upload" size="small">导入</el-button>
-                    <el-button @click="onExportJSON" :icon="Download" size="small">导出</el-button>
-                    <el-button @click="onExportHTML" :icon="Document" size="small">导出 HTML</el-button>
+                    <el-button :icon="Edit" size="small" @click="onAceEditorChange">
+                        JSON
+                    </el-button>
+                    <el-button :icon="Upload" size="small" @click="onImportJSON">
+                        导入
+                    </el-button>
+                    <el-button :icon="Download" size="small" @click="onExportJSON">
+                        导出
+                    </el-button>
+                    <el-button :icon="Document" size="small" @click="onExportHTML">
+                        导出 HTML
+                    </el-button>
                 </div>
 
                 <!-- 编辑 -->
                 <div class="btn-group">
                     <span class="group-label">编辑</span>
-                    <el-button @click="undo" :icon="RefreshLeft" size="small">撤销</el-button>
-                    <el-button @click="redo" :icon="RefreshRight" size="small">重做</el-button>
+                    <el-button :icon="RefreshLeft" size="small" @click="undo">
+                        撤销
+                    </el-button>
+                    <el-button :icon="RefreshRight" size="small" @click="redo">
+                        重做
+                    </el-button>
                 </div>
 
                 <!-- 插入 -->
@@ -24,32 +36,76 @@
                     <span class="group-label">插入</span>
                     <label for="input" class="upload-label">
                         <el-button :icon="Picture" size="small">图片</el-button>
-                        <input id="input" type="file" hidden accept="image/*" @change="handleFileChange" />
+                        <input
+                            id="input"
+                            type="file"
+                            hidden
+                            accept="image/*"
+                            @change="handleFileChange"
+                        >
                     </label>
                 </div>
 
                 <!-- 画布 -->
                 <div class="btn-group">
                     <span class="group-label">画布</span>
-                    <el-button @click="preview(false)" :icon="View" size="small">预览</el-button>
-                    <el-button @click="save" :icon="FolderChecked" size="small">保存</el-button>
-                    <el-button @click="clearCanvas" :icon="Delete" size="small">清空</el-button>
-                    <el-button @click="preview(true)" :icon="Camera" size="small">截图</el-button>
+                    <el-button :icon="View" size="small" @click="preview(false)">
+                        预览
+                    </el-button>
+                    <el-button :icon="FolderChecked" size="small" @click="save">
+                        保存
+                    </el-button>
+                    <el-button :icon="Delete" size="small" @click="clearCanvas">
+                        清空
+                    </el-button>
+                    <el-button :icon="Camera" size="small" @click="preview(true)">
+                        截图
+                    </el-button>
                 </div>
 
                 <!-- 组件 -->
                 <div class="btn-group">
                     <span class="group-label">组件</span>
-                    <el-button :disabled="!areaData.components.length" @click="compose" :icon="Connection" size="small">组合</el-button>
-                    <el-button :disabled="!curComponent || curComponent.isLock || curComponent.component != 'Group'" @click="decompose" :icon="Remove" size="small">拆分</el-button>
-                    <el-button :disabled="!curComponent || curComponent.isLock" @click="lock" :icon="Lock" size="small">锁定</el-button>
-                    <el-button :disabled="!curComponent || !curComponent.isLock" @click="unlock" :icon="Unlock" size="small">解锁</el-button>
+                    <el-button
+                        :disabled="!areaData.components.length"
+                        :icon="Connection"
+                        size="small"
+                        @click="compose"
+                    >
+                        组合
+                    </el-button>
+                    <el-button
+                        :disabled="!curComponent || curComponent.isLock || curComponent.component != 'Group'"
+                        :icon="Remove"
+                        size="small"
+                        @click="decompose"
+                    >
+                        拆分
+                    </el-button>
+                    <el-button
+                        :disabled="!curComponent || curComponent.isLock"
+                        :icon="Lock"
+                        size="small"
+                        @click="lock"
+                    >
+                        锁定
+                    </el-button>
+                    <el-button
+                        :disabled="!curComponent || !curComponent.isLock"
+                        :icon="Unlock"
+                        size="small"
+                        @click="unlock"
+                    >
+                        解锁
+                    </el-button>
                 </div>
 
                 <!-- 更多 -->
                 <div class="btn-group">
                     <span class="group-label">更多</span>
-                    <el-button @click="showVersionHistory" :icon="Clock" size="small">版本</el-button>
+                    <el-button :icon="Clock" size="small" @click="showVersionHistory">
+                        版本
+                    </el-button>
                 </div>
             </div>
 
@@ -57,13 +113,13 @@
             <div class="toolbar-right">
                 <div class="canvas-config">
                     <label>画布</label>
-                    <input v-model="canvasStyleData.width" class="canvas-input" />
+                    <input v-model="canvasStyleData.width" class="canvas-input">
                     <span class="separator">×</span>
-                    <input v-model="canvasStyleData.height" class="canvas-input" />
+                    <input v-model="canvasStyleData.height" class="canvas-input">
                 </div>
                 <div class="canvas-config">
                     <label>比例</label>
-                    <input v-model="scale" class="canvas-input scale-input" @input="handleScaleChange" />
+                    <input v-model="scale" class="canvas-input scale-input" @input="handleScaleChange">
                     <span>%</span>
                 </div>
                 <el-divider direction="vertical" />
@@ -74,11 +130,31 @@
                     inline-prompt
                     @change="handleToggleDarkMode"
                 />
+                <template v-if="collabEnabled">
+                    <el-divider direction="vertical" />
+                    <el-tooltip :content="collabStatus === 'connected' ? '协同已连接' : collabStatus === 'connecting' ? '正在连接...' : '协同已断开'" placement="bottom">
+                        <el-tag
+                            :type="collabStatus === 'connected' ? 'success' : collabStatus === 'connecting' ? 'warning' : 'danger'"
+                            size="small"
+                            class="collab-status-tag"
+                        >
+                            {{ collabStatus === 'connected' ? '🟢' : collabStatus === 'connecting' ? '🟡' : '🔴' }}
+                            协同
+                        </el-tag>
+                    </el-tooltip>
+                    <OnlineUsers />
+                </template>
+                <template v-else>
+                    <el-divider direction="vertical" />
+                    <el-button :icon="Connection" size="small" @click="toggleCollab">
+                        协同编辑
+                    </el-button>
+                </template>
             </div>
         </div>
 
         <Preview v-if="isShowPreview" :is-screenshot="isScreenshot" @close="handlePreviewChange" />
-        <AceEditor v-if="isShowAceEditor" @closeEditor="closeEditor" />
+        <AceEditor v-if="isShowAceEditor" @close-editor="closeEditor" />
 
         <el-drawer
             v-model="isShowVersionHistory"
@@ -97,10 +173,17 @@
             :close-on-click-modal="false"
             width="600px"
         >
-            <el-input v-model="jsonData" type="textarea" :rows="20" placeholder="请输入 JSON 数据" />
+            <el-input
+                v-model="jsonData"
+                type="textarea"
+                :rows="20"
+                placeholder="请输入 JSON 数据"
+            />
             <template #footer>
                 <div class="dialog-footer">
-                    <el-button @click="isShowDialog = false">取 消</el-button>
+                    <el-button @click="isShowDialog = false">
+                        取 消
+                    </el-button>
                     <el-upload
                         v-show="!isExport"
                         action="/"
@@ -108,9 +191,13 @@
                         :show-file-list="false"
                         accept="application/json"
                     >
-                        <el-button type="primary">选择 JSON 文件</el-button>
+                        <el-button type="primary">
+                            选择 JSON 文件
+                        </el-button>
                     </el-upload>
-                    <el-button type="primary" @click="processJSON">确 定</el-button>
+                    <el-button type="primary" @click="processJSON">
+                        确 定
+                    </el-button>
                 </div>
             </template>
         </el-dialog>
@@ -133,11 +220,13 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import {
     Sunny, Moon, Edit, Upload, Download, RefreshLeft, RefreshRight,
     Picture, View, FolderChecked, Delete, Camera, Connection,
-    Remove, Lock, Unlock, Clock, Document
+    Remove, Lock, Unlock, Clock, Document,
 } from '@element-plus/icons-vue'
 import type { ComponentData, CanvasStyleData, ComponentStyle } from '@/types'
 import { validateAuto } from '@/utils/validation'
 import { exportToHtml, downloadHtmlFile } from '@/utils/exportHtml'
+import OnlineUsers from '@/components/OnlineUsers.vue'
+import { getCollab, initCollab } from '@/collab'
 
 interface ExportData {
     version: string
@@ -148,6 +237,43 @@ interface ExportData {
 
 const store = useStore()
 const { componentData, canvasStyleData, areaData, curComponent, isDarkMode } = storeToRefs(store)
+
+// 协同编辑状态(响应式)
+const collabEnabled = ref(!!getCollab())
+const collabStatus = ref<'connecting' | 'connected' | 'disconnected'>(
+    getCollab()?.status.value ?? 'disconnected'
+)
+
+function toggleCollab(): void {
+    if (collabEnabled.value) return
+    // 初始化协同
+    store.initCommandContext()
+    const collab = initCollab()
+    collabEnabled.value = true
+    collabStatus.value = collab.status.value
+    // 监听状态变化
+    const checkStatus = setInterval(() => {
+        const c = getCollab()
+        if (c) {
+            collabStatus.value = c.status.value
+            if (c.status.value === 'connected') clearInterval(checkStatus)
+        }
+    }, 500)
+    ElMessage.success('协同编辑已开启')
+}
+
+// 如果已通过 URL 参数启用了协同,同步状态
+if (collabEnabled.value) {
+    const collab = getCollab()
+    if (collab) {
+        collabStatus.value = collab.status.value
+        // 监听状态变化
+        const unwatch = setInterval(() => {
+            const c = getCollab()
+            if (c) collabStatus.value = c.status.value
+        }, 1000)
+    }
+}
 
 const isShowPreview = ref(false)
 const isShowAceEditor = ref(false)
@@ -293,7 +419,7 @@ function regenerateComponentIds(components: ComponentData[]): ComponentData[] {
         id: generateID(),
         ...(comp.component === 'Group' && Array.isArray(comp.propValue)
             ? { propValue: regenerateComponentIds(comp.propValue as ComponentData[]) }
-            : {})
+            : {}),
     }))
 }
 
@@ -314,9 +440,9 @@ function processJSON(): void {
 
             if (componentData.value.length > 0) {
                 ElMessageBox.confirm('当前画布有内容，导入将覆盖现有内容，是否继续？', '导入确认',
-                    { confirmButtonText: '覆盖', cancelButtonText: '取消', type: 'warning' }
+                    { confirmButtonText: '覆盖', cancelButtonText: '取消', type: 'warning' },
                 ).then(() => applyImport(newComponents, canvasStyle ?? null))
-                .catch(() => {})
+                    .catch(() => {})
             } else {
                 applyImport(newComponents, canvasStyle ?? null)
             }
@@ -475,6 +601,16 @@ function showVersionHistory(): void { isShowVersionHistory.value = true }
     .upload-label {
         display: inline-flex;
         cursor: pointer;
+    }
+
+    .collab-status-tag {
+        cursor: default;
+        user-select: none;
+        font-size: 12px;
+        padding: 0 8px;
+        height: 24px;
+        line-height: 24px;
+        border: none;
     }
 
     .canvas-config {

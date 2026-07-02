@@ -203,30 +203,30 @@ export interface ComponentTemplate {
 
 // ==================== 公共样式 ====================
 export const commonStyle: Pick<ComponentStyle, 'rotate' | 'opacity'> = {
-  rotate: 0,
-  opacity: 1,
+    rotate: 0,
+    opacity: 1,
 }
 
 export const commonAttr: Pick<ComponentData, 'animations' | 'events' | 'groupStyle' | 'isLock' | 'collapseName' | 'linkage' | 'parentId' | 'slot' | 'zIndex'> = {
-  animations: [],
-  events: {},
-  groupStyle: {},
-  isLock: false,
-  collapseName: 'style',
-  parentId: null,
-  slot: 'default',
-  zIndex: 0,
-  linkage: {
-    duration: 0,
-    data: [
-      {
-        id: '',
-        label: '',
-        event: '',
-        style: [{ key: '', value: '' }],
-      },
-    ],
-  },
+    animations: [],
+    events: {},
+    groupStyle: {},
+    isLock: false,
+    collapseName: 'style',
+    parentId: null,
+    slot: 'default',
+    zIndex: 0,
+    linkage: {
+        duration: 0,
+        data: [
+            {
+                id: '',
+                label: '',
+                event: '',
+                style: [{ key: '', value: '' }],
+            },
+        ],
+    },
 }
 
 // ==================== 版本管理 ====================

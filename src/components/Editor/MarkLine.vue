@@ -1,14 +1,14 @@
 <template>
-  <div class="mark-line">
-    <div
-      v-for="line in lines"
-      v-show="lineStatus[line] || false"
-      :key="line"
-      :ref="(el) => { if (el) lineRefs[line] = el as HTMLElement }"
-      class="line"
-      :class="line.includes('x') ? 'xline' : 'yline'"
-    ></div>
-  </div>
+    <div class="mark-line">
+        <div
+            v-for="line in lines"
+            v-show="lineStatus[line] || false"
+            :key="line"
+            :ref="(el) => { if (el) lineRefs[line] = el as HTMLElement }"
+            class="line"
+            :class="line.includes('x') ? 'xline' : 'yline'"
+        />
+    </div>
 </template>
 
 <script setup lang="ts">
@@ -28,12 +28,12 @@ type LineName = (typeof lines)[number]
 const diff = 3 // 相距 diff 像素将自动吸附
 
 const lineStatus = reactive<Record<LineName, boolean>>({
-  xt: false,
-  xc: false,
-  xb: false,
-  yl: false,
-  yc: false,
-  yr: false,
+    xt: false,
+    xc: false,
+    xb: false,
+    yl: false,
+    yc: false,
+    yr: false,
 })
 
 const lineRefs: Record<string, HTMLElement> = {}
@@ -53,212 +53,212 @@ const throttledShowLine = throttle(showLine, 16)
 const { moveState } = useEditorContext()
 
 watch(
-  () => moveState.isMoving,
-  (isMoving) => {
-    if (isMoving) {
-      throttledShowLine(moveState.isDownward, moveState.isRightward)
-    } else {
-      hideLine()
-    }
-  }
+    () => moveState.isMoving,
+    (isMoving) => {
+        if (isMoving) {
+            throttledShowLine(moveState.isDownward, moveState.isRightward)
+        } else {
+            hideLine()
+        }
+    },
 )
 
 function hideLine(): void {
-  Object.keys(lineStatus).forEach(line => {
-    lineStatus[line as LineName] = false
-  })
+    Object.keys(lineStatus).forEach(line => {
+        lineStatus[line as LineName] = false
+    })
 }
 
 function showLine(isDownward: boolean, isRightward: boolean): void {
-  if (!curComponent.value) return
+    if (!curComponent.value) return
 
-  const components = componentData.value
-  const curComponentStyle = getComponentRotatedStyle(curComponent.value.style)
-  const curComponentHalfWidth = curComponentStyle.width / 2
-  const curComponentHalfHeight = curComponentStyle.height / 2
+    const components = componentData.value
+    const curComponentStyle = getComponentRotatedStyle(curComponent.value.style)
+    const curComponentHalfWidth = curComponentStyle.width / 2
+    const curComponentHalfHeight = curComponentStyle.height / 2
 
-  hideLine()
-  components.forEach(component => {
-    if (component === curComponent.value) return
-    const componentStyle = getComponentRotatedStyle(component.style)
-    const { top, left, bottom, right } = componentStyle
-    const componentHalfWidth = componentStyle.width / 2
-    const componentHalfHeight = componentStyle.height / 2
+    hideLine()
+    components.forEach(component => {
+        if (component === curComponent.value) return
+        const componentStyle = getComponentRotatedStyle(component.style)
+        const { top, left, bottom, right } = componentStyle
+        const componentHalfWidth = componentStyle.width / 2
+        const componentHalfHeight = componentStyle.height / 2
 
-    const conditions: Record<'top' | 'left', Condition[]> = {
-      top: [
-        {
-          isNearly: isNearly(curComponentStyle.top, top),
-          lineNode: lineRefs.xt,
-          line: 'xt',
-          dragShift: top,
-          lineShift: top,
-        },
-        {
-          isNearly: isNearly(curComponentStyle.bottom, top),
-          lineNode: lineRefs.xt,
-          line: 'xt',
-          dragShift: top - curComponentStyle.height,
-          lineShift: top,
-        },
-        {
-          // 组件与拖拽节点的中间是否对齐
-          isNearly: isNearly(
-            curComponentStyle.top + curComponentHalfHeight,
-            top + componentHalfHeight
-          ),
-          lineNode: lineRefs.xc,
-          line: 'xc',
-          dragShift: top + componentHalfHeight - curComponentHalfHeight,
-          lineShift: top + componentHalfHeight,
-        },
-        {
-          isNearly: isNearly(curComponentStyle.top, bottom),
-          lineNode: lineRefs.xb,
-          line: 'xb',
-          dragShift: bottom,
-          lineShift: bottom,
-        },
-        {
-          isNearly: isNearly(curComponentStyle.bottom, bottom),
-          lineNode: lineRefs.xb,
-          line: 'xb',
-          dragShift: bottom - curComponentStyle.height,
-          lineShift: bottom,
-        },
-      ],
-      left: [
-        {
-          isNearly: isNearly(curComponentStyle.left, left),
-          lineNode: lineRefs.yl,
-          line: 'yl',
-          dragShift: left,
-          lineShift: left,
-        },
-        {
-          isNearly: isNearly(curComponentStyle.right, left),
-          lineNode: lineRefs.yl,
-          line: 'yl',
-          dragShift: left - curComponentStyle.width,
-          lineShift: left,
-        },
-        {
-          // 组件与拖拽节点的中间是否对齐
-          isNearly: isNearly(
-            curComponentStyle.left + curComponentHalfWidth,
-            left + componentHalfWidth
-          ),
-          lineNode: lineRefs.yc,
-          line: 'yc',
-          dragShift: left + componentHalfWidth - curComponentHalfWidth,
-          lineShift: left + componentHalfWidth,
-        },
-        {
-          isNearly: isNearly(curComponentStyle.left, right),
-          lineNode: lineRefs.yr,
-          line: 'yr',
-          dragShift: right,
-          lineShift: right,
-        },
-        {
-          isNearly: isNearly(curComponentStyle.right, right),
-          lineNode: lineRefs.yr,
-          line: 'yr',
-          dragShift: right - curComponentStyle.width,
-          lineShift: right,
-        },
-      ],
-    }
+        const conditions: Record<'top' | 'left', Condition[]> = {
+            top: [
+                {
+                    isNearly: isNearly(curComponentStyle.top, top),
+                    lineNode: lineRefs.xt,
+                    line: 'xt',
+                    dragShift: top,
+                    lineShift: top,
+                },
+                {
+                    isNearly: isNearly(curComponentStyle.bottom, top),
+                    lineNode: lineRefs.xt,
+                    line: 'xt',
+                    dragShift: top - curComponentStyle.height,
+                    lineShift: top,
+                },
+                {
+                    // 组件与拖拽节点的中间是否对齐
+                    isNearly: isNearly(
+                        curComponentStyle.top + curComponentHalfHeight,
+                        top + componentHalfHeight,
+                    ),
+                    lineNode: lineRefs.xc,
+                    line: 'xc',
+                    dragShift: top + componentHalfHeight - curComponentHalfHeight,
+                    lineShift: top + componentHalfHeight,
+                },
+                {
+                    isNearly: isNearly(curComponentStyle.top, bottom),
+                    lineNode: lineRefs.xb,
+                    line: 'xb',
+                    dragShift: bottom,
+                    lineShift: bottom,
+                },
+                {
+                    isNearly: isNearly(curComponentStyle.bottom, bottom),
+                    lineNode: lineRefs.xb,
+                    line: 'xb',
+                    dragShift: bottom - curComponentStyle.height,
+                    lineShift: bottom,
+                },
+            ],
+            left: [
+                {
+                    isNearly: isNearly(curComponentStyle.left, left),
+                    lineNode: lineRefs.yl,
+                    line: 'yl',
+                    dragShift: left,
+                    lineShift: left,
+                },
+                {
+                    isNearly: isNearly(curComponentStyle.right, left),
+                    lineNode: lineRefs.yl,
+                    line: 'yl',
+                    dragShift: left - curComponentStyle.width,
+                    lineShift: left,
+                },
+                {
+                    // 组件与拖拽节点的中间是否对齐
+                    isNearly: isNearly(
+                        curComponentStyle.left + curComponentHalfWidth,
+                        left + componentHalfWidth,
+                    ),
+                    lineNode: lineRefs.yc,
+                    line: 'yc',
+                    dragShift: left + componentHalfWidth - curComponentHalfWidth,
+                    lineShift: left + componentHalfWidth,
+                },
+                {
+                    isNearly: isNearly(curComponentStyle.left, right),
+                    lineNode: lineRefs.yr,
+                    line: 'yr',
+                    dragShift: right,
+                    lineShift: right,
+                },
+                {
+                    isNearly: isNearly(curComponentStyle.right, right),
+                    lineNode: lineRefs.yr,
+                    line: 'yr',
+                    dragShift: right - curComponentStyle.width,
+                    lineShift: right,
+                },
+            ],
+        }
 
-    const needShow: LineName[] = []
-    const rotate = curComponentStyle.rotate
-    Object.keys(conditions).forEach(key => {
-      const directionKey = key as 'top' | 'left'
-      // 遍历符合的条件并处理
-      conditions[directionKey].forEach(condition => {
-        if (!condition.isNearly) return
-        // 修改当前组件位移
-        store.setShapeSingleStyle({
-          key: directionKey,
-          value:
+        const needShow: LineName[] = []
+        const rotate = curComponentStyle.rotate
+        Object.keys(conditions).forEach(key => {
+            const directionKey = key as 'top' | 'left'
+            // 遍历符合的条件并处理
+            conditions[directionKey].forEach(condition => {
+                if (!condition.isNearly) return
+                // 修改当前组件位移
+                store.setShapeSingleStyle({
+                    key: directionKey,
+                    value:
             rotate !== 0
-              ? translateCurComponentShift(directionKey, condition, curComponentStyle)
-              : condition.dragShift,
+                ? translateCurComponentShift(directionKey, condition, curComponentStyle)
+                : condition.dragShift,
+                })
+
+                condition.lineNode.style[directionKey] = `${condition.lineShift}px`
+                needShow.push(condition.line)
+            })
         })
 
-        condition.lineNode.style[directionKey] = `${condition.lineShift}px`
-        needShow.push(condition.line)
-      })
+        // 同一方向上同时显示三条线可能导致视觉混乱，因此限制为只显示一条
+        if (needShow.length) {
+            chooseTheTrueLine(needShow, isDownward, isRightward)
+        }
     })
-
-    // 同一方向上同时显示三条线可能导致视觉混乱，因此限制为只显示一条
-    if (needShow.length) {
-      chooseTheTrueLine(needShow, isDownward, isRightward)
-    }
-  })
 }
 
 function translateCurComponentShift(
-  key: 'top' | 'left',
-  condition: Condition,
-  curComponentStyle: RotatedStyle
+    key: 'top' | 'left',
+    condition: Condition,
+    curComponentStyle: RotatedStyle,
 ): number {
-  if (!curComponent.value) return condition.dragShift
+    if (!curComponent.value) return condition.dragShift
 
-  const { width, height } = curComponent.value.style
-  if (key === 'top') {
-    return Math.round(condition.dragShift - (height - curComponentStyle.height) / 2)
-  }
+    const { width, height } = curComponent.value.style
+    if (key === 'top') {
+        return Math.round(condition.dragShift - (height - curComponentStyle.height) / 2)
+    }
 
-  return Math.round(condition.dragShift - (width - curComponentStyle.width) / 2)
+    return Math.round(condition.dragShift - (width - curComponentStyle.width) / 2)
 }
 
 function chooseTheTrueLine(
-  needShow: LineName[],
-  isDownward: boolean,
-  isRightward: boolean
+    needShow: LineName[],
+    isDownward: boolean,
+    isRightward: boolean,
 ): void {
-  // 如果鼠标向右移动，则按从右到左的顺序显示竖线 否则按相反顺序显示
-  // 如果鼠标向下移动，则按从下到上的顺序显示横线 否则按相反顺序显示
-  if (isRightward) {
-    if (needShow.includes('yr')) {
-      lineStatus.yr = true
-    } else if (needShow.includes('yc')) {
-      lineStatus.yc = true
-    } else if (needShow.includes('yl')) {
-      lineStatus.yl = true
+    // 如果鼠标向右移动，则按从右到左的顺序显示竖线 否则按相反顺序显示
+    // 如果鼠标向下移动，则按从下到上的顺序显示横线 否则按相反顺序显示
+    if (isRightward) {
+        if (needShow.includes('yr')) {
+            lineStatus.yr = true
+        } else if (needShow.includes('yc')) {
+            lineStatus.yc = true
+        } else if (needShow.includes('yl')) {
+            lineStatus.yl = true
+        }
+    } else {
+        if (needShow.includes('yl')) {
+            lineStatus.yl = true
+        } else if (needShow.includes('yc')) {
+            lineStatus.yc = true
+        } else if (needShow.includes('yr')) {
+            lineStatus.yr = true
+        }
     }
-  } else {
-    if (needShow.includes('yl')) {
-      lineStatus.yl = true
-    } else if (needShow.includes('yc')) {
-      lineStatus.yc = true
-    } else if (needShow.includes('yr')) {
-      lineStatus.yr = true
-    }
-  }
 
-  if (isDownward) {
-    if (needShow.includes('xb')) {
-      lineStatus.xb = true
-    } else if (needShow.includes('xc')) {
-      lineStatus.xc = true
-    } else if (needShow.includes('xt')) {
-      lineStatus.xt = true
+    if (isDownward) {
+        if (needShow.includes('xb')) {
+            lineStatus.xb = true
+        } else if (needShow.includes('xc')) {
+            lineStatus.xc = true
+        } else if (needShow.includes('xt')) {
+            lineStatus.xt = true
+        }
+    } else {
+        if (needShow.includes('xt')) {
+            lineStatus.xt = true
+        } else if (needShow.includes('xc')) {
+            lineStatus.xc = true
+        } else if (needShow.includes('xb')) {
+            lineStatus.xb = true
+        }
     }
-  } else {
-    if (needShow.includes('xt')) {
-      lineStatus.xt = true
-    } else if (needShow.includes('xc')) {
-      lineStatus.xc = true
-    } else if (needShow.includes('xb')) {
-      lineStatus.xb = true
-    }
-  }
 }
 
 function isNearly(dragValue: number, targetValue: number): boolean {
-  return Math.abs(dragValue - targetValue) <= diff
+    return Math.abs(dragValue - targetValue) <= diff
 }
 </script>
 

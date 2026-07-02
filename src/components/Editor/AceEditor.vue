@@ -58,57 +58,57 @@ const aceRef = ref<HTMLElement | null>(null)
 let editor: ace.Ace.Editor | null = null
 
 onMounted(() => {
-  ace.config.set('basePath', 'https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.14/')
-  if (aceRef.value) {
-    editor = ace.edit(aceRef.value, {
-      maxLines: 40,
-      minLines: 40,
-      fontSize: 14,
-      theme: 'ace/theme/one_dark',
-      mode: 'ace/mode/json5',
-      tabSize: 4,
-      readOnly: false,
-      enableBasicAutocompletion: true,
-      enableLiveAutocompletion: true,
-      enableSnippets: true,
-    })
-    setCode()
-  }
+    ace.config.set('basePath', 'https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.14/')
+    if (aceRef.value) {
+        editor = ace.edit(aceRef.value, {
+            maxLines: 40,
+            minLines: 40,
+            fontSize: 14,
+            theme: 'ace/theme/one_dark',
+            mode: 'ace/mode/json5',
+            tabSize: 4,
+            readOnly: false,
+            enableBasicAutocompletion: true,
+            enableLiveAutocompletion: true,
+            enableSnippets: true,
+        })
+        setCode()
+    }
 })
 
 watch([curComponent, canvasStyleData], () => {
-  setCode()
+    setCode()
 })
 
 function setCode(): void {
-  if (!editor) return
-  const obj = curComponent.value || canvasStyleData.value
-  editor.setValue(JSON.stringify(obj, null, 4))
+    if (!editor) return
+    const obj = curComponent.value || canvasStyleData.value
+    editor.setValue(JSON.stringify(obj, null, 4))
 }
 
 function getCode(): void {
-  if (!editor) return
-  const str = editor.getValue()
-  try {
-    const data = JSON.parse(str)
-    if (!curComponent.value) {
-      store.setCanvasStyle(data)
-    } else {
-      store.updateComponentProps(data)
+    if (!editor) return
+    const str = editor.getValue()
+    try {
+        const data = JSON.parse(str)
+        if (!curComponent.value) {
+            store.setCanvasStyle(data)
+        } else {
+            store.updateComponentProps(data)
+        }
+        ElMessage.success('保存成功')
+    } catch (e) {
+        ElMessage.error('JSON 格式错误')
+        console.error(e)
     }
-    ElMessage.success('保存成功')
-  } catch (e) {
-    ElMessage.error('JSON 格式错误')
-    console.error(e)
-  }
 }
 
 function openSearchBox(): void {
-  editor?.execCommand('find')
+    editor?.execCommand('find')
 }
 
 function closeEditor(): void {
-  emit('closeEditor')
+    emit('closeEditor')
 }
 </script>
 

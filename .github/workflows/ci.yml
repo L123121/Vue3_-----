@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# 同一分支的后续推送会取消正在跑的旧 run，省 CI 额度
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # ----- 必过门禁 -----
+      - name: Lint
+        run: npm run lint:check
+
+      - name: Unit tests
+        run: npm run test:run
+
+      # ----- 非阻塞：项目存在历史类型债（约 150 处 vue-tsc 报错），
+      # 待逐步清理后改为必过（移除 continue-on-error）-----
+      - name: Type check
+        run: npm run type-check
+        continue-on-error: true
+
+      - name: Build
+        run: npm run build
+        continue-on-error: true

@@ -84,47 +84,47 @@ const registryMap = new Map<string, RegistryEntry>()
  * }, VTextAttr)
  */
 export function registerComponent(
-  type: string,
-  component: Component,
-  meta: ComponentMetaData,
-  attrComponent?: Component,
+    type: string,
+    component: Component,
+    meta: ComponentMetaData,
+    attrComponent?: Component,
 ): void {
-  registryMap.set(type, {
-    component,
-    attrComponent: attrComponent ?? null,
-    meta: {
-      ...meta,
-      acceptChildren: meta.acceptChildren ?? false,
-    },
-  })
+    registryMap.set(type, {
+        component,
+        attrComponent: attrComponent ?? null,
+        meta: {
+            ...meta,
+            acceptChildren: meta.acceptChildren ?? false,
+        },
+    })
 }
 
 /**
  * 根据组件类型获取组件
  */
 export function getComponent(type: string): Component | undefined {
-  return registryMap.get(type)?.component
+    return registryMap.get(type)?.component
 }
 
 /**
  * 根据组件类型获取属性面板组件
  */
 export function getAttrComponent(type: string): Component | null | undefined {
-  return registryMap.get(type)?.attrComponent
+    return registryMap.get(type)?.attrComponent
 }
 
 /**
  * 根据组件类型获取元数据
  */
 export function getComponentMeta(type: string): ComponentMetaData | undefined {
-  return registryMap.get(type)?.meta
+    return registryMap.get(type)?.meta
 }
 
 /**
  * 获取所有已注册组件的类型名列表
  */
 export function getRegisteredTypes(): string[] {
-  return Array.from(registryMap.keys())
+    return Array.from(registryMap.keys())
 }
 
 /**
@@ -132,32 +132,32 @@ export function getRegisteredTypes(): string[] {
  * 用于左侧组件面板渲染
  */
 export function getPublicComponents(): ComponentMetaData[] {
-  return Array.from(registryMap.values())
-    .filter(entry => !entry.meta.internal)
-    .map(entry => entry.meta)
+    return Array.from(registryMap.values())
+        .filter(entry => !entry.meta.internal)
+        .map(entry => entry.meta)
 }
 
 /**
  * 获取所有内部组件（仅用于渲染，不显示在面板）
  */
 export function getInternalComponents(): ComponentMetaData[] {
-  return Array.from(registryMap.values())
-    .filter(entry => entry.meta.internal)
-    .map(entry => entry.meta)
+    return Array.from(registryMap.values())
+        .filter(entry => entry.meta.internal)
+        .map(entry => entry.meta)
 }
 
 /**
  * 判断组件是否为容器（可包含子组件）
  */
 export function isContainer(type: string): boolean {
-  return registryMap.get(type)?.meta.acceptChildren ?? false
+    return registryMap.get(type)?.meta.acceptChildren ?? false
 }
 
 /**
  * 获取所有容器的类型名列表
  */
 export function getContainerTypes(): string[] {
-  return Array.from(registryMap.entries())
-    .filter(([_, entry]) => entry.meta.acceptChildren)
-    .map(([type]) => type)
+    return Array.from(registryMap.entries())
+        .filter(([_, entry]) => entry.meta.acceptChildren)
+        .map(([type]) => type)
 }

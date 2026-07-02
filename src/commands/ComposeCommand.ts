@@ -1,115 +1,154 @@
-import { BaseCommand } from './BaseCommand'
-import { CommandType } from './types'
+import { BaseCommand, getContext } from './BaseCommand'
+import { CommandType, type CommandEnvelope } from './types'
+import { register } from './registry'
 import type { ComponentData, ComponentStyle } from '@/types'
-import { useStore } from '@/store'
-import generateID from '@/utils/generateID'
 import { createGroupStyle } from '@/utils/style'
+import generateID from '@/utils/generateID'
+import { nanoid } from 'nanoid'
+
+interface ComposeData {
+    componentIds: string[]
+    /** 首次执行创建的组合组件(固定 id) */
+    groupComponent: ComponentData | null
+    originalComponents: ComponentData[]
+    originalIndices: number[]
+}
 
 /**
  * 组合命令
  */
 export class ComposeCommand extends BaseCommand {
-  type = CommandType.COMPOSE
-  description = '组合组件'
-  mergeable = false
+    type = CommandType.COMPOSE
+    description = '组合组件'
+    mergeable = false
 
-  private groupComponent: ComponentData | null = null
-  private originalComponents: ComponentData[] = []
-  private originalIndices: number[] = []
+    private composeData: ComposeData
 
-  constructor(private componentIds: string[]) {
-    super()
-  }
-
-  execute(): void {
-    const store = useStore()
-
-    // 收集要组合的组件
-    this.originalComponents = []
-    this.originalIndices = []
-
-    const components: ComponentData[] = []
-    this.componentIds.forEach(id => {
-      const idx = store.componentData.findIndex(c => c.id === id)
-      if (idx !== -1) {
-        this.originalIndices.push(idx)
-        const comp = store.componentData[idx]
-        this.originalComponents.push(JSON.parse(JSON.stringify(comp)))
-        components.push(comp)
-      }
-    })
-
-    // 创建组合组件
-    this.groupComponent = {
-      id: generateID(),
-      component: 'Group',
-      label: '组合',
-      icon: 'qunzu',
-      style: { ...this.calculateGroupBounds(components) } as ComponentStyle,
-      propValue: components,
-      animations: [],
-      events: {},
-      groupStyle: {},
-      isLock: false,
-      collapseName: 'style',
-      linkage: {
-        duration: 0,
-        data: [{ id: '', label: '', event: '', style: [{ key: '', value: '' }] }],
-      },
+    constructor(componentIds: string[]) {
+        super()
+        this.id = nanoid()
+        this.composeData = {
+            componentIds: [...componentIds],
+            groupComponent: null,
+            originalComponents: [],
+            originalIndices: [],
+        }
+        this.data = this.composeData as unknown as Record<string, unknown>
     }
 
-    createGroupStyle(this.groupComponent)
+    execute(): void {
+        const ctx = getContext()
+        const all = ctx.getAll()
 
-    // 删除原有组件，添加组合组件
-    this.componentIds.forEach(id => {
-      const idx = store.componentData.findIndex(c => c.id === id)
-      if (idx !== -1) store.componentData.splice(idx, 1)
-    })
+        // 收集要组合的组件(首次执行)
+        if (this.composeData.groupComponent === null) {
+            this.composeData.originalComponents = []
+            this.composeData.originalIndices = []
 
-    store.componentData.push(this.groupComponent)
-    store.setCurComponent({ component: this.groupComponent, index: store.componentData.length - 1 })
-  }
+            const components: ComponentData[] = []
+            this.composeData.componentIds.forEach(id => {
+                const idx = all.findIndex(c => c.id === id)
+                if (idx !== -1) {
+                    this.composeData.originalIndices.push(idx)
+                    const comp = all[idx]
+                    this.composeData.originalComponents.push(structuredClone(comp))
+                    components.push(comp)
+                }
+            })
 
-  undo(): void {
-    const store = useStore()
+            this.composeData.groupComponent = {
+                id: generateID(),
+                component: 'Group',
+                label: '组合',
+                icon: 'qunzu',
+                style: { ...this.calculateGroupBounds(components) } as ComponentStyle,
+                propValue: components.map(c => structuredClone(c)),
+                animations: [],
+                events: {},
+                groupStyle: {},
+                isLock: false,
+                collapseName: 'style',
+                parentId: null,
+                slot: 'default',
+                zIndex: 0,
+                linkage: {
+                    duration: 0,
+                    data: [{ id: '', label: '', event: '', style: [{ key: '', value: '' }] }],
+                },
+            }
 
-    if (!this.groupComponent) return
+            createGroupStyle(this.composeData.groupComponent)
+        }
 
-    // 删除组合组件
-    const groupIdx = store.componentData.findIndex(c => c.id === this.groupComponent!.id)
-    if (groupIdx !== -1) {
-      store.componentData.splice(groupIdx, 1)
+        // 删除原有组件
+        this.composeData.componentIds.forEach(id => {
+            ctx.remove(id)
+        })
+
+        // 添加组合组件
+        ctx.insert(this.composeData.groupComponent)
+        ctx.setCurComponent(this.composeData.groupComponent.id)
+
+        this.data = { ...this.composeData } as unknown as Record<string, unknown>
     }
 
-    // 恢复原有组件
-    this.originalComponents.forEach((comp, i) => {
-      const idx = this.originalIndices[i]
-      store.componentData.splice(idx, 0, JSON.parse(JSON.stringify(comp)))
-    })
-  }
+    undo(): void {
+        const ctx = getContext()
+        if (!this.composeData.groupComponent) return
 
-  private calculateGroupBounds(components: ComponentData[]): Partial<ComponentStyle> {
-    let minTop = Infinity,
-      minLeft = Infinity
-    let maxBottom = -Infinity,
-      maxRight = -Infinity
+        // 删除组合组件
+        ctx.remove(this.composeData.groupComponent.id)
 
-    components.forEach(comp => {
-      const top = comp.style.top ?? 0
-      const left = comp.style.left ?? 0
-      minTop = Math.min(minTop, top)
-      minLeft = Math.min(minLeft, left)
-      maxBottom = Math.max(maxBottom, top + (comp.style.height ?? 0))
-      maxRight = Math.max(maxRight, left + (comp.style.width ?? 0))
-    })
-
-    return {
-      top: minTop,
-      left: minLeft,
-      width: maxRight - minLeft,
-      height: maxBottom - minTop,
-      rotate: 0,
-      opacity: 1,
+        // 恢复原有组件
+        this.composeData.originalComponents.forEach((comp, i) => {
+            ctx.insert(structuredClone(comp), this.composeData.originalIndices[i])
+        })
     }
-  }
+
+    private calculateGroupBounds(components: ComponentData[]): Partial<ComponentStyle> {
+        let minTop = Infinity,
+            minLeft = Infinity
+        let maxBottom = -Infinity,
+            maxRight = -Infinity
+
+        components.forEach(comp => {
+            const top = comp.style.top ?? 0
+            const left = comp.style.left ?? 0
+            minTop = Math.min(minTop, top)
+            minLeft = Math.min(minLeft, left)
+            maxBottom = Math.max(maxBottom, top + (comp.style.height ?? 0))
+            maxRight = Math.max(maxRight, left + (comp.style.width ?? 0))
+        })
+
+        return {
+            top: minTop,
+            left: minLeft,
+            width: maxRight - minLeft,
+            height: maxBottom - minTop,
+            rotate: 0,
+            opacity: 1,
+        }
+    }
+
+    canMergeWith(): boolean {
+        return false
+    }
+
+    merge(other: import('./types').Command): import('./types').Command {
+        return other
+    }
 }
+
+register(CommandType.COMPOSE, (env: CommandEnvelope) => {
+    const d = env.data as unknown as ComposeData
+    const cmd = new ComposeCommand(d.componentIds)
+    cmd.id = env.id
+    ;(cmd as unknown as { composeData: ComposeData }).composeData = {
+        componentIds: [...d.componentIds],
+        groupComponent: d.groupComponent ? structuredClone(d.groupComponent) : null,
+        originalComponents: (d.originalComponents ?? []).map(c => structuredClone(c)),
+        originalIndices: [...(d.originalIndices ?? [])],
+    }
+    cmd.data = (cmd as unknown as { composeData: ComposeData }).composeData as unknown as Record<string, unknown>
+    return cmd
+})

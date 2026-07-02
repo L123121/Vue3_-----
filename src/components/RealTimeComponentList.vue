@@ -10,15 +10,31 @@
             <el-icon v-if="item.icon === 'DataAnalysis'" class="mr-4">
                 <DataAnalysis />
             </el-icon>
-            <span v-else class="iconfont" :class="'icon-' + item.icon"></span>
+            <span v-else class="iconfont" :class="'icon-' + item.icon" />
 
             <span class="label">{{ item.label }}</span>
             <span class="zindex-badge">{{ item.zIndex }}</span>
 
             <div class="icon-container">
-                <el-button link :icon="ArrowUp" size="small" @click.stop="onUp(item)"></el-button>
-                <el-button link :icon="ArrowDown" size="small" @click.stop="onDown(item)"></el-button>
-                <el-button link :icon="Delete" size="small" type="danger" @click.stop="onDelete(item)"></el-button>
+                <el-button
+                    link
+                    :icon="ArrowUp"
+                    size="small"
+                    @click.stop="onUp(item)"
+                />
+                <el-button
+                    link
+                    :icon="ArrowDown"
+                    size="small"
+                    @click.stop="onDown(item)"
+                />
+                <el-button
+                    link
+                    :icon="Delete"
+                    size="small"
+                    type="danger"
+                    @click.stop="onDelete(item)"
+                />
             </div>
         </div>
     </div>

@@ -1,97 +1,106 @@
 <template>
-  <div :class="!isDarkMode ? 'home' : 'home dark'">
-    <Toolbar />
+    <div :class="!isDarkMode ? 'home' : 'home dark'">
+        <Toolbar />
 
-    <main>
-      <!-- 左侧组件列表 -->
-      <section :class="leftList ? 'left active' : 'left inactive'">
-        <el-tabs v-model="leftActiveName">
-          <el-tab-pane name="components">
-            <template #label>
-              <span class="tab-label">
-                <el-icon><Box /></el-icon>
-                <span>组件</span>
-              </span>
-            </template>
-            <ComponentList />
-          </el-tab-pane>
-          <el-tab-pane name="layers">
-            <template #label>
-              <span class="tab-label">
-                <el-icon><Operation /></el-icon>
-                <span>图层</span>
-              </span>
-            </template>
-            <RealTimeComponentList />
-          </el-tab-pane>
-        </el-tabs>
-      </section>
-      <el-button
-        title="show-list-btn"
-        class="btn show-list left-btn"
-        :class="leftList ? 'panel-open' : 'panel-closed'"
-        :icon="leftList ? ArrowLeft : ArrowRight"
-        @click="isShowLeft"
-      />
+        <main>
+            <!-- 左侧组件列表 -->
+            <section :class="leftList ? 'left active' : 'left inactive'">
+                <el-tabs v-model="leftActiveName">
+                    <el-tab-pane name="components">
+                        <template #label>
+                            <span class="tab-label">
+                                <el-icon><Box /></el-icon>
+                                <span>组件</span>
+                            </span>
+                        </template>
+                        <ComponentList />
+                    </el-tab-pane>
+                    <el-tab-pane name="layers">
+                        <template #label>
+                            <span class="tab-label">
+                                <el-icon><Operation /></el-icon>
+                                <span>图层</span>
+                            </span>
+                        </template>
+                        <RealTimeComponentList />
+                    </el-tab-pane>
+                </el-tabs>
+            </section>
+            <el-button
+                title="show-list-btn"
+                class="btn show-list left-btn"
+                :class="leftList ? 'panel-open' : 'panel-closed'"
+                :icon="leftList ? ArrowLeft : ArrowRight"
+                @click="isShowLeft"
+            />
 
-      <!-- 中间画布 -->
-      <section class="center" :class="{ 'right-open': rightList }">
-        <div
-          class="content"
-          @drop="handleDrop"
-          @dragover="handleDragOver"
-          @mousedown="handleMouseDown"
-          @mouseup="deselectCurComponent"
-        >
-          <Editor />
-        </div>
-      </section>
+            <!-- 中间画布 -->
+            <section class="center" :class="{ 'right-open': rightList }">
+                <div
+                    class="content"
+                    @drop="handleDrop"
+                    @dragover="handleDragOver"
+                    @mousedown="handleMouseDown"
+                    @mouseup="deselectCurComponent"
+                >
+                    <Editor />
+                </div>
+            </section>
 
-      <!-- 右侧属性列表（Teleport 到 body，避免样式污染和 z-index 问题） -->
-      <Teleport to="body">
-        <section v-show="rightList" class="right right-panel-teleported">
-          <el-tabs v-if="curComponent" v-model="activeName">
-            <el-tab-pane name="attr">
-              <template #label>
-                <span class="tab-label">
-                  <el-icon><CollectionTag /></el-icon>
-                  <span>属性</span>
-                </span>
-              </template>
-              <!-- 元数据驱动属性面板：根据组件注册时的 propConfigs 自动渲染，无配置时回退到 Attr.vue -->
-              <PropPanelRenderer />
-            </el-tab-pane>
-            <el-tab-pane name="animation">
-              <template #label>
-                <span class="tab-label">
-                  <el-icon><Film /></el-icon>
-                  <span>动画</span>
-                </span>
-              </template>
-              <AnimationList />
-            </el-tab-pane>
-            <el-tab-pane name="events">
-              <template #label>
-                <span class="tab-label">
-                  <el-icon><Pointer /></el-icon>
-                  <span>事件</span>
-                </span>
-              </template>
-              <EventList />
-            </el-tab-pane>
-          </el-tabs>
-          <CanvasAttr v-else />
-        </section>
-      </Teleport>
-      <el-button
-        title="show-list-btn"
-        class="btn show-list right-btn"
-        :class="rightList ? 'panel-open' : 'panel-closed'"
-        :icon="rightList ? ArrowRight : ArrowLeft"
-        @click="isShowRight"
-      />
-    </main>
-  </div>
+            <!-- 右侧属性列表（Teleport 到 body，避免样式污染和 z-index 问题） -->
+            <Teleport to="body">
+                <section v-show="rightList" class="right right-panel-teleported">
+                    <el-tabs v-if="curComponent" v-model="activeName">
+                        <el-tab-pane name="attr">
+                            <template #label>
+                                <span class="tab-label">
+                                    <el-icon><CollectionTag /></el-icon>
+                                    <span>属性</span>
+                                </span>
+                            </template>
+                            <!-- 元数据驱动属性面板：根据组件注册时的 propConfigs 自动渲染，无配置时回退到 Attr.vue -->
+                            <PropPanelRenderer />
+                        </el-tab-pane>
+                        <el-tab-pane name="animation">
+                            <template #label>
+                                <span class="tab-label">
+                                    <el-icon><Film /></el-icon>
+                                    <span>动画</span>
+                                </span>
+                            </template>
+                            <AnimationList />
+                        </el-tab-pane>
+                        <el-tab-pane name="events">
+                            <template #label>
+                                <span class="tab-label">
+                                    <el-icon><Pointer /></el-icon>
+                                    <span>事件</span>
+                                </span>
+                            </template>
+                            <EventList />
+                        </el-tab-pane>
+                        <el-tab-pane v-if="collabEnabled" name="history">
+                            <template #label>
+                                <span class="tab-label">
+                                    <el-icon><Clock /></el-icon>
+                                    <span>历史</span>
+                                </span>
+                            </template>
+                            <CommandTimeline />
+                        </el-tab-pane>
+                    </el-tabs>
+                    <CanvasAttr v-else />
+                </section>
+            </Teleport>
+            <el-button
+                title="show-list-btn"
+                class="btn show-list right-btn"
+                :class="rightList ? 'panel-open' : 'panel-closed'"
+                :icon="rightList ? ArrowRight : ArrowLeft"
+                @click="isShowRight"
+            />
+        </main>
+    </div>
 </template>
 
 <script setup lang="ts">
@@ -103,92 +112,107 @@ import ComponentList from '@/components/ComponentList.vue'
 import AnimationList from '@/components/AnimationList.vue'
 import EventList from '@/components/EventList.vue'
 import Toolbar from '@/components/Toolbar.vue'
+import CommandTimeline from '@/components/CommandTimeline.vue'
 import { listenGlobalKeyDown } from '@/utils/shortcutKey'
 import RealTimeComponentList from '@/components/RealTimeComponentList.vue'
 import CanvasAttr from '@/components/CanvasAttr.vue'
 import PropPanelRenderer from '@/custom-component/PropPanelRenderer.vue'
-import { ArrowLeft, ArrowRight, Box, Operation, CollectionTag, Film, Pointer } from '@element-plus/icons-vue'
+import { ArrowLeft, ArrowRight, Box, Operation, CollectionTag, Film, Pointer, Clock } from '@element-plus/icons-vue'
 import { useAutoSave } from '@/composables/useAutoSave'
+import { useCommandHistory, restoreCommandHistory } from '@/composables/useCommandHistory'
 import { useDragDrop } from '@/composables/useDragDrop'
 import { usePanelToggle } from '@/composables/usePanelToggle'
 import { validateComponentData, validateCanvasStyle } from '@/utils/validation'
+import { getCollab } from '@/collab'
 
 const store = useStore()
 const { curComponent, isClickComponent, rightList, isDarkMode } = storeToRefs(store)
+
+// 协同是否启用(决定是否显示"历史"tab 等协同 UI)
+const collabEnabled = !!getCollab()
 
 const activeName = ref('attr')
 const leftActiveName = ref('components')
 
 // Composables
 useAutoSave()
+// 命令历史持久化(跨会话恢复),仅协同启用时启用持久化监听
+if (collabEnabled) {
+    useCommandHistory()
+}
 const { handleDrop, handleDragOver } = useDragDrop()
 const { leftList, isShowLeft, isShowRight } = usePanelToggle()
 
 // ==================== 初始化 ====================
 function restore(): void {
-  const canvasData = localStorage.getItem('canvasData')
-  if (canvasData) {
-    try {
-      const parsed = JSON.parse(canvasData)
-      const result = validateComponentData(parsed)
-      if (result.success && result.data && result.data.length > 0) {
-        store.setComponentData(result.data)
-      } else {
-        console.warn('画布数据校验失败，已忽略:', result.errors)
-      }
-    } catch (e) {
-      console.error('数据解析失败:', e)
+    const canvasData = localStorage.getItem('canvasData')
+    if (canvasData) {
+        try {
+            const parsed = JSON.parse(canvasData)
+            const result = validateComponentData(parsed)
+            if (result.success && result.data && result.data.length > 0) {
+                store.setComponentData(result.data)
+            } else {
+                console.warn('画布数据校验失败，已忽略:', result.errors)
+            }
+        } catch (e) {
+            console.error('数据解析失败:', e)
+        }
     }
-  }
 
-  const canvasStyle = localStorage.getItem('canvasStyle')
-  if (canvasStyle) {
-    try {
-      const parsed = JSON.parse(canvasStyle)
-      const result = validateCanvasStyle(parsed)
-      if (result.success && result.data) {
-        store.setCanvasStyle(result.data)
-      } else {
-        console.warn('画布样式校验失败，已忽略:', result.errors)
-      }
-    } catch (e) {
-      console.error('画布样式解析失败:', e)
+    const canvasStyle = localStorage.getItem('canvasStyle')
+    if (canvasStyle) {
+        try {
+            const parsed = JSON.parse(canvasStyle)
+            const result = validateCanvasStyle(parsed)
+            if (result.success && result.data) {
+                store.setCanvasStyle(result.data)
+            } else {
+                console.warn('画布样式校验失败，已忽略:', result.errors)
+            }
+        } catch (e) {
+            console.error('画布样式解析失败:', e)
+        }
     }
-  }
 }
 
 onMounted(() => {
-  restore()
-  const cleanup = listenGlobalKeyDown()
-  onUnmounted(() => { cleanup() })
+    restore()
+    const cleanup = listenGlobalKeyDown()
+    onUnmounted(() => { cleanup() })
 
-  const savedMode = localStorage.getItem('isDarkMode')
-  if (savedMode !== null) {
-    try {
-      store.toggleDarkMode(JSON.parse(savedMode))
-    } catch {
-      store.toggleDarkMode(false)
+    // 协同启用时:从 IndexedDB 恢复命令栈(跨会话撤销)
+    if (collabEnabled) {
+        void restoreCommandHistory()
     }
-  } else {
-    store.isDarkMode = false
-  }
+
+    const savedMode = localStorage.getItem('isDarkMode')
+    if (savedMode !== null) {
+        try {
+            store.toggleDarkMode(JSON.parse(savedMode))
+        } catch {
+            store.toggleDarkMode(false)
+        }
+    } else {
+        store.isDarkMode = false
+    }
 })
 
 // ==================== 画布交互 ====================
 function handleMouseDown(e: MouseEvent): void {
-  e.stopPropagation()
-  store.setClickComponentStatus(false)
-  store.setInEditorStatus(true)
+    e.stopPropagation()
+    store.setClickComponentStatus(false)
+    store.setInEditorStatus(true)
 }
 
 function deselectCurComponent(e: MouseEvent): void {
-  if (!isClickComponent.value) {
-    store.setCurComponent({ component: null, index: null })
-  }
+    if (!isClickComponent.value) {
+        store.setCurComponent({ component: null, index: null })
+    }
 
-  if (e.button !== 2) {
-    store.hideContextMenu()
-  }
+    if (e.button !== 2) {
+        store.hideContextMenu()
+    }
 }
 </script>
 

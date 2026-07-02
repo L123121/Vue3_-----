@@ -1,7 +1,7 @@
 <template>
     <el-dialog
-        :title="`${config.label} 动画配置`"
         v-model="centerDialogVisible"
+        :title="`${config.label} 动画配置`"
         width="30%"
         center
         @close="handleCloseModal"
@@ -21,8 +21,7 @@
                 active-text="是"
                 inactive-text="否"
                 :disabled="isDisabled"
-            >
-            </el-switch>
+            />
         </div>
         <template #footer>
             <span class="dialog-footer">
@@ -47,10 +46,10 @@ interface AnimationConfig {
 }
 
 const props = defineProps({
-  curIndex: {
-    type: Number,
-    default: 0,
-  },
+    curIndex: {
+        type: Number,
+        default: 0,
+    },
 })
 
 const emit = defineEmits<{
@@ -62,43 +61,43 @@ const { curComponent } = storeToRefs(store)
 
 const centerDialogVisible = ref(true)
 const config = reactive<AnimationConfig>({
-  label: '',
-  animationTime: 1,
-  isLoop: false,
-  value: '',
+    label: '',
+    animationTime: 1,
+    isLoop: false,
+    value: '',
 })
 
 const isDisabled = computed((): boolean => {
-  return curComponent.value.animations.length > 1
+    return curComponent.value.animations.length > 1
 })
 
 // Initialize config
 const animation = curComponent.value.animations[props.curIndex]
 if (animation) {
-  const { label, animationTime, isLoop = false, value } = animation
-  Object.assign(config, {
-    animationTime,
-    label,
-    isLoop,
-    value,
-  })
+    const { label, animationTime, isLoop = false, value } = animation
+    Object.assign(config, {
+        animationTime,
+        label,
+        isLoop,
+        value,
+    })
 }
 
 function handleCloseModal(): void {
-  emit('close')
+    emit('close')
 }
 
 function handleSaveSetting(): void {
-  const { isLoop } = config
-  store.alterAnimation({
-    index: props.curIndex,
-    data: {
-      animationTime: config.animationTime,
-      isLoop,
-    },
-  })
-  eventBus.emit('stopAnimation')
-  handleCloseModal()
+    const { isLoop } = config
+    store.alterAnimation({
+        index: props.curIndex,
+        data: {
+            animationTime: config.animationTime,
+            isLoop,
+        },
+    })
+    eventBus.emit('stopAnimation')
+    handleCloseModal()
 }
 </script>
 
