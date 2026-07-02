@@ -12,10 +12,13 @@
     "lint:check": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx --ignore-path .gitignore",
     "test": "vitest",
     "test:run": "vitest run",
-    "server": "node server/index.js"
+    "server": "node server/index.js",
+    "api": "node server/app.js",
+    "server:install": "cd server && npm install"
   },
   "dependencies": {
     "ace-builds": "^1.12.3",
+    "axios": "^1.18.1",
     "dompurify": "^3.4.11",
     "echarts": "^5.4.1",
     "element-plus": "^2.3.0",

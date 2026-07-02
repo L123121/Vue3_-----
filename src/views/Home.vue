@@ -105,6 +105,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { useStore } from '@/store'
 import { storeToRefs } from 'pinia'
 import Editor from '@/components/Editor/index.vue'
@@ -126,6 +127,7 @@ import { validateComponentData, validateCanvasStyle } from '@/utils/validation'
 import { getCollab } from '@/collab'
 
 const store = useStore()
+const route = useRoute()
 const { curComponent, isClickComponent, rightList, isDarkMode } = storeToRefs(store)
 
 // 协同是否启用(决定是否显示"历史"tab 等协同 UI)
@@ -144,6 +146,22 @@ const { handleDrop, handleDragOver } = useDragDrop()
 const { leftList, isShowLeft, isShowRight } = usePanelToggle()
 
 // ==================== 初始化 ====================
+// 从服务器加载页面(editor/:id 模式)
+async function loadFromServer(pageId: string): Promise<void> {
+    try {
+        const { pagesApi } = await import('@/utils/api')
+        const res = await pagesApi.get(pageId)
+        if (res.page.componentData?.length > 0) {
+            store.setComponentData(res.page.componentData)
+        }
+        if (res.page.canvasStyle) {
+            store.setCanvasStyle(res.page.canvasStyle)
+        }
+    } catch (e) {
+        console.error('加载服务器页面失败:', e)
+    }
+}
+
 function restore(): void {
     const canvasData = localStorage.getItem('canvasData')
     if (canvasData) {
@@ -176,8 +194,14 @@ function restore(): void {
     }
 }
 
-onMounted(() => {
-    restore()
+onMounted(async () => {
+    // 优先从服务器加载(editor/:id 模式)
+    const pageId = route.params.id as string
+    if (pageId) {
+        await loadFromServer(pageId)
+    } else {
+        restore()
+    }
     const cleanup = listenGlobalKeyDown()
     onUnmounted(() => { cleanup() })
 

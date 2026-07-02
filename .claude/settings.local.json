@@ -73,7 +73,9 @@
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8080)",
       "Bash(curl -s http://localhost:8080)",
       "Bash(curl -s \"http://localhost:8080/?collab=1\")",
-      "Bash(git commit -m 'feat: 协同编辑模块完整实现 + 体验优化 *)"
+      "Bash(git commit -m 'feat: 协同编辑模块完整实现 + 体验优化 *)",
+      "Bash(timeout 5 node -e ' *)",
+      "Bash(git commit -m 'feat: 搭建后端 API + 用户系统 + 前端页面管理 *)"
     ]
   }
 }

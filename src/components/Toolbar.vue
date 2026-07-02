@@ -206,6 +206,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { useStore } from '@/store'
 import { storeToRefs } from 'pinia'
 import generateID from '@/utils/generateID'
@@ -236,6 +237,7 @@ interface ExportData {
 }
 
 const store = useStore()
+const route = useRoute()
 const { componentData, canvasStyleData, areaData, curComponent, isDarkMode } = storeToRefs(store)
 
 // 协同编辑状态(响应式)
@@ -384,12 +386,34 @@ function preview(screenshot: boolean): void {
 
 function save(): void {
     try {
+        // 保存到 localStorage(本地回退)
         localStorage.setItem('canvasData', JSON.stringify(componentData.value))
         localStorage.setItem('canvasStyle', JSON.stringify(canvasStyleData.value))
         ElMessage.success('保存成功')
     } catch (e) {
         ElMessage.error('保存失败，请检查浏览器存储空间')
         console.error('保存失败:', e)
+    }
+}
+
+// 保存到服务器(editor/:id 模式)
+async function saveToServer(): Promise<void> {
+    const pageId = route.params.id as string
+    if (!pageId) {
+        save()
+        return
+    }
+    try {
+        const { pagesApi } = await import('@/utils/api')
+        await pagesApi.update(pageId, {
+            componentData: componentData.value,
+            canvasStyle: canvasStyleData.value,
+        })
+        ElMessage.success('已保存到服务器')
+    } catch (e: any) {
+        ElMessage.error('保存到服务器失败: ' + e.message)
+        // 回退到本地保存
+        save()
     }
 }
 
