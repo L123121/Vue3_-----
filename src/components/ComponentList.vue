@@ -57,19 +57,28 @@ function handleDragStart(e: DragEvent): void {
     const target = e.target as HTMLElement
     const listEl = target.closest('.list') as HTMLElement
     if (listEl && e.dataTransfer) {
-    e.dataTransfer!.setData('index', listEl.dataset.index || '')
-    // 自定义拖拽预览：显示小标签而非整个卡片
-    const ghost = document.createElement('div')
-    ghost.textContent = listEl.querySelector('.text')?.textContent || ''
-    ghost.style.cssText = 'padding:4px 12px;background:#409eff;color:#fff;border-radius:4px;font-size:12px;position:absolute;top:-999px;white-space:nowrap'
-    document.body.appendChild(ghost)
-    e.dataTransfer.setDragImage(ghost, 30, 14)
-    // 使用 setTimeout 兜底，确保 ghost 元素一定被移除
-    setTimeout(() => {
-        if (ghost.parentNode) {
-            document.body.removeChild(ghost)
-        }
-    }, 0)
+        e.dataTransfer.setData('index', listEl.dataset.index || '')
+        // 自定义拖拽预览：显示小标签而非整个卡片
+        const ghost = document.createElement('div')
+        ghost.textContent = listEl.querySelector('.text')?.textContent || ''
+        Object.assign(ghost.style, {
+            padding: '4px 12px',
+            background: '#409eff',
+            color: '#fff',
+            borderRadius: '4px',
+            fontSize: '12px',
+            position: 'absolute',
+            top: '-999px',
+            whiteSpace: 'nowrap',
+        })
+        document.body.appendChild(ghost)
+        e.dataTransfer.setDragImage(ghost, 30, 14)
+        // 使用 setTimeout 兜底，确保 ghost 元素一定被移除
+        setTimeout(() => {
+            if (ghost.parentNode) {
+                document.body.removeChild(ghost)
+            }
+        }, 0)
     }
 }
 </script>

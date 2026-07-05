@@ -6,7 +6,7 @@
             </el-button>
             <div class="event-tags">
                 <el-tag
-                    v-for="event in Object.keys(curComponent.events)"
+                    v-for="event in Object.keys(curEvents)"
                     :key="event"
                     closable
                     size="large"
@@ -14,7 +14,7 @@
                 >
                     {{ event }}
                 </el-tag>
-                <div v-if="Object.keys(curComponent.events).length === 0" class="no-event">
+                <div v-if="Object.keys(curEvents).length === 0" class="no-event">
                     暂无事件
                 </div>
             </div>
@@ -64,7 +64,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useStore } from '@/store'
 import { storeToRefs } from 'pinia'
 import Modal from '@/components/Modal.vue'
@@ -72,6 +72,7 @@ import { eventList } from '@/utils/events'
 
 const store = useStore()
 const { curComponent } = storeToRefs(store)
+const curEvents = computed(() => curComponent.value?.events ?? {})
 
 const isShowEvent = ref(false)
 const eventActiveName = ref('redirect')

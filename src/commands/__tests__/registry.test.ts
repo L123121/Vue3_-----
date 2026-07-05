@@ -20,7 +20,7 @@ describe('命令注册表 - deserialize', () => {
 
     it('未知命令类型返回 null', () => {
         const envelope: CommandEnvelope = {
-            type: 999 as CommandType,
+            type: 999 as unknown as CommandType,
             id: 'unknown',
             timestamp: Date.now(),
             data: {},
@@ -58,7 +58,7 @@ describe('命令注册表 - deserializeStack', () => {
                 data: { component: { id: 'c1', component: 'VText', propValue: 't', style: { width: 100, height: 50 } } },
             },
             {
-                type: 999 as CommandType,
+                type: 999 as unknown as CommandType,
                 id: 'unknown',
                 timestamp: 2000,
                 data: {},

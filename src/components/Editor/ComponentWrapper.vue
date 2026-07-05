@@ -48,9 +48,10 @@ onMounted(() => {
 
 function onClick(): void {
     const eventMap = props.config.events
+    const eventFnMap = events as unknown as Record<string, (param: string) => void>
     Object.keys(eventMap).forEach(key => {
-        if (events[key]) {
-            events[key](eventMap[key])
+        if (eventFnMap[key]) {
+            eventFnMap[key](eventMap[key])
         }
     })
 

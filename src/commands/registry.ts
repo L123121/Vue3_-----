@@ -9,7 +9,7 @@
  */
 
 import type { Command, CommandEnvelope, CommandFactory } from './types'
-import { CommandType } from './types'
+import type { CommandType } from './types'
 
 const registry = new Map<CommandType, CommandFactory>()
 

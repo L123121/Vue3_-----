@@ -3,18 +3,26 @@
  */
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { authApi } from '@/utils/api'
+import { authApi, type UserInfo } from '@/utils/api'
+
+function parseStoredUser(): UserInfo | null {
+    try {
+        return JSON.parse(localStorage.getItem('user') || 'null') as UserInfo | null
+    } catch {
+        return null
+    }
+}
 
 export const useAuthStore = defineStore('auth', () => {
     // 从 localStorage 恢复
     const token = ref(localStorage.getItem('token') || '')
-    const user = ref<any>(JSON.parse(localStorage.getItem('user') || 'null'))
+    const user = ref<UserInfo | null>(parseStoredUser())
 
     const isLoggedIn = computed(() => !!token.value)
     const username = computed(() => user.value?.username || '')
     const userId = computed(() => user.value?._id || '')
 
-    function saveAuth(t: string, u: any) {
+    function saveAuth(t: string, u: UserInfo) {
         token.value = t
         user.value = u
         localStorage.setItem('token', t)

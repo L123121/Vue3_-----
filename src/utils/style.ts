@@ -116,7 +116,7 @@ export function getStyle(
 /**
  * 组件旋转后的扩展样式
  */
-interface RotatedStyle extends ComponentStyle {
+export interface RotatedStyle extends ComponentStyle {
   bottom: number
   right: number
 }

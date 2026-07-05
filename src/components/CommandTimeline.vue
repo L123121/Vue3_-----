@@ -30,7 +30,7 @@
 
 <script setup lang="ts">
 import { computed, onUnmounted } from 'vue'
-import { useStore } from '@/store'
+import { getCommandTimeline, undoUntil } from '@/composables/useCommandActions'
 
 /**
  * 操作历史时间线
@@ -38,13 +38,12 @@ import { useStore } from '@/store'
  * 渲染撤销栈为可点击列表。点击某步 → 回退到该步(连续 undo)。
  * 栈数据来自 CommandManager,跨会话从 IndexedDB 恢复后仍可用。
  */
-const store = useStore()
 
 // 时间线需要响应式更新:监听 dataVersion(每次命令操作都递增)重新读取
-const timeline = computed(() => store.getCommandTimeline())
+const timeline = computed(() => getCommandTimeline())
 
 function handleJumpTo(targetId: string): void {
-    store.undoUntil(targetId)
+    undoUntil(targetId)
 }
 
 function formatTime(ts: number): string {

@@ -39,9 +39,10 @@ export interface RequestConfig {
 // ==================== 动画配置 ====================
 export interface Animation {
   type: string
+  label?: string
   duration: number
   delay: number
-  interationNum: number
+  iterationNum: number
   infinite: boolean
   applyTo: 'enter' | 'leave'
 }
@@ -207,7 +208,20 @@ export const commonStyle: Pick<ComponentStyle, 'rotate' | 'opacity'> = {
     opacity: 1,
 }
 
-export const commonAttr: Pick<ComponentData, 'animations' | 'events' | 'groupStyle' | 'isLock' | 'collapseName' | 'linkage' | 'parentId' | 'slot' | 'zIndex'> = {
+type CommonAttr = Pick<
+    ComponentData,
+    | 'animations'
+    | 'events'
+    | 'groupStyle'
+    | 'isLock'
+    | 'collapseName'
+    | 'linkage'
+    | 'parentId'
+    | 'slot'
+    | 'zIndex'
+>
+
+export const commonAttr: CommonAttr = {
     animations: [],
     events: {},
     groupStyle: {},

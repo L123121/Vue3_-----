@@ -12,7 +12,7 @@
             
             <div class="animation-tags">
                 <el-tag
-                    v-for="(tag, index) in curComponent.animations"
+                    v-for="(tag, index) in animations"
                     :key="index"
                     closable
                     size="large"
@@ -23,8 +23,8 @@
                         <Setting />
                     </el-icon>
                 </el-tag>
-                
-                <div v-if="curComponent.animations.length === 0" class="no-animation">
+
+                <div v-if="animations.length === 0" class="no-animation">
                     暂无动画
                 </div>
             </div>
@@ -70,24 +70,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import Modal from '@/components/Modal.vue'
 import eventBus from '@/utils/eventBus'
 import animationClassData from '@/utils/animationClassData'
+import type { AnimationItem } from '@/utils/animationClassData'
 import { useStore } from '@/store'
 import { storeToRefs } from 'pinia'
-import runAnimation from '@/utils/runAnimation'
 import AnimationSettingModal from './AnimationSettingModal.vue'
 import { Setting } from '@element-plus/icons-vue'
-import type { Animation } from '@/types'
-
-interface AnimationItem {
-  label: string
-  value: string
-}
 
 const store = useStore()
 const { curComponent } = storeToRefs(store)
+const animations = computed(() => curComponent.value?.animations ?? [])
 
 const isShowAnimation = ref(false)
 const hoverPreviewAnimate = ref('')
@@ -106,7 +101,7 @@ function previewAnimate(): void {
 
 function removeAnimation(index: number): void {
     store.removeAnimation(index)
-    if (!curComponent.value.animations.length) { // 清空动画数据，停止运动
+    if (curComponent.value && !curComponent.value.animations.length) {
         eventBus.emit('stopAnimation')
     }
 }

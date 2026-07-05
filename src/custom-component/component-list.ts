@@ -58,7 +58,7 @@ const list: ComponentTemplate[] = [
             fontWeight: 400,
             lineHeight: '',
             letterSpacing: 0,
-            textAlign: '',
+            textAlign: undefined,
             color: '',
             padding: 4,
         },
@@ -78,7 +78,7 @@ const list: ComponentTemplate[] = [
             fontWeight: 400,
             lineHeight: '',
             letterSpacing: 0,
-            textAlign: '',
+            textAlign: undefined,
             color: '',
             backgroundColor: '',
         },
@@ -274,7 +274,7 @@ const list: ComponentTemplate[] = [
 for (let i = 0, len = list.length; i < len; i++) {
     const item = list[i]
     item.style = { ...commonStyle, ...item.style } as ComponentStyle
-    list[i] = { ...commonAttr, ...item } as ComponentData
+    list[i] = { ...commonAttr, ...item } as unknown as ComponentData
 }
 
 export default list as ComponentData[]

@@ -30,7 +30,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useStore } from '@/store'
 import { storeToRefs } from 'pinia'
 import request from '@/utils/request'
@@ -144,10 +144,13 @@ function handleBlur(e: Event): void {
     const target = e.target as HTMLElement
     const html = sanitizeHtml(target.innerHTML)
     if (html !== '') {
+        // eslint-disable-next-line vue/no-mutating-props -- 画布元素是 store 引用，文本组件负责就地编辑
         props.element.propValue = html
     } else {
+        // eslint-disable-next-line vue/no-mutating-props -- 画布元素是 store 引用，文本组件负责就地编辑
         props.element.propValue = ''
         nextTick(() => {
+            // eslint-disable-next-line vue/no-mutating-props -- 保留空文本占位，避免 contenteditable 塌陷
             props.element.propValue = '&nbsp;'
         })
     }

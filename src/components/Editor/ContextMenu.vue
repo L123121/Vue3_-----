@@ -45,6 +45,12 @@
 <script setup lang="ts">
 import { useStore } from '@/store'
 import { storeToRefs } from 'pinia'
+import {
+    cutWithCommand,
+    pasteWithCommand,
+    deleteComponentWithCommand,
+    layerOperation,
+} from '@/composables/useCommandActions'
 
 const store = useStore()
 const { menuTop, menuLeft, menuShow, curComponent } = storeToRefs(store)
@@ -63,7 +69,7 @@ function handleMouseUp(): void {
 }
 
 function cut(): void {
-    store.cutWithCommand()
+    cutWithCommand()
 }
 
 function copy(): void {
@@ -71,34 +77,34 @@ function copy(): void {
 }
 
 function paste(): void {
-    store.pasteWithCommand(true)
+    pasteWithCommand(true)
 }
 
 function deleteComponent(): void {
-    store.deleteComponentWithCommand()
+    deleteComponentWithCommand()
 }
 
 function upComponent(): void {
     if (store.curComponent) {
-        store.layerOperation(store.curComponent.id, 'up')
+        layerOperation(store.curComponent.id, 'up')
     }
 }
 
 function downComponent(): void {
     if (store.curComponent) {
-        store.layerOperation(store.curComponent.id, 'down')
+        layerOperation(store.curComponent.id, 'down')
     }
 }
 
 function topComponent(): void {
     if (store.curComponent) {
-        store.layerOperation(store.curComponent.id, 'top')
+        layerOperation(store.curComponent.id, 'top')
     }
 }
 
 function bottomComponent(): void {
     if (store.curComponent) {
-        store.layerOperation(store.curComponent.id, 'bottom')
+        layerOperation(store.curComponent.id, 'bottom')
     }
 }
 </script>

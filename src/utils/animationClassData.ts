@@ -4,8 +4,8 @@
 export interface AnimationItem {
   label: string
   value: string
-  pending: boolean
-  animationTime: number
+  pending?: boolean
+  animationTime?: number
 }
 
 /**

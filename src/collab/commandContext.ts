@@ -13,7 +13,7 @@
 
 import { useStore } from '@/store'
 import type { CommandContext } from '@/commands/types'
-import type { ComponentData, ComponentStyle, CanvasStyleData, CopyData } from '@/types'
+import type { CopyData } from '@/types'
 import { applyLocalChange } from './useCollabStore'
 import { fromComponentData, findYMapIndex, replaceAllComponents, writeCanvas } from './yDoc'
 import { isApplyingRemote } from './undoOrigin'

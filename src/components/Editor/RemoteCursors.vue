@@ -37,7 +37,8 @@
  * 光标坐标基于画布编辑区(editorEl)的相对坐标,由 Editor 广播时换算。
  */
 import { ref, onMounted, onUnmounted } from 'vue'
-import { getCollab, type AwarenessState } from '@/collab'
+import { getCollab } from '@/collab/useCollabStore'
+import type { AwarenessState } from '@/collab/awareness'
 
 interface RemoteEntry {
     clientId: number

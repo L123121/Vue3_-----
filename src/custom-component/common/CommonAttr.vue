@@ -37,9 +37,10 @@
 import { ref, computed, watch } from 'vue'
 import { useStore } from '@/store'
 import { storeToRefs } from 'pinia'
-import { styleData, textAlignOptions, borderStyleOptions, verticalAlignOptions, selectKey, optionMap } from '@/utils/attr'
+import { styleData, selectKey, optionMap } from '@/utils/attr'
 import Request from './Request.vue'
 import Linkage from './Linkage.vue'
+import { resizeComponent } from '@/composables/useCommandActions'
 
 const store = useStore()
 const { curComponent } = storeToRefs(store)
@@ -86,7 +87,7 @@ function setFontSize() {
     curComponent.value.style = newStyle
     store.setShapeStyle(newStyle)
     // 使用样式变更命令
-    store.resizeComponent(curComponent.value.id, initialStyle, newStyle)
+    resizeComponent(curComponent.value.id, initialStyle, newStyle)
 }
 </script>
 

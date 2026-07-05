@@ -1,6 +1,6 @@
 @charset "UTF-8";
 
-@import './variable.scss';
+@use './variable.scss' as *;
 
 /*!
  * animate.css -https://daneden.github.io/animate.css/

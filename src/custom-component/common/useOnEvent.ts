@@ -20,7 +20,8 @@ export function useOnEvent(
         data.forEach(item => {
             item.style.forEach(e => {
                 if (e.key) {
-                    props.element.style[e.key] = e.value
+                    const style = props.element.style as unknown as Record<string, string>
+                    style[e.key] = e.value
                 }
             })
         })

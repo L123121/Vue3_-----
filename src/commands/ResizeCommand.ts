@@ -1,5 +1,5 @@
 import { BaseCommand, getContext } from './BaseCommand'
-import { CommandType, type PositionData, type CommandEnvelope } from './types'
+import { CommandType, type PositionData, type Command, type CommandEnvelope } from './types'
 import { register } from './registry'
 import type { ComponentStyle } from '@/types'
 import { nanoid } from 'nanoid'
@@ -56,14 +56,14 @@ export class ResizeCommand extends BaseCommand {
         getContext().setStyle(this.positionData.componentId, stripUndefined(this.positionData.oldStyle) as Partial<ComponentStyle>)
     }
 
-    canMergeWith(other: import('./types').Command, _mergeTimeWindow: number): boolean {
+    canMergeWith(other: Command, _mergeTimeWindow: number): boolean {
         if (other.type !== CommandType.RESIZE_COMPONENT) return false
         if (!(other instanceof ResizeCommand)) return false
 
         return this.positionData.componentId === other.positionData.componentId
     }
 
-    merge(other: import('./types').Command): ResizeCommand {
+    merge(other: Command): ResizeCommand {
         if (!(other instanceof ResizeCommand)) return this
 
         return new ResizeCommand(

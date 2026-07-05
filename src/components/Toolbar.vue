@@ -52,7 +52,7 @@
                     <el-button :icon="View" size="small" @click="preview(false)">
                         预览
                     </el-button>
-                    <el-button :icon="FolderChecked" size="small" @click="save">
+                    <el-button :icon="FolderChecked" size="small" @click="saveToServer">
                         保存
                     </el-button>
                     <el-button :icon="Delete" size="small" @click="clearCanvas">
@@ -132,9 +132,9 @@
                 />
                 <template v-if="collabEnabled">
                     <el-divider direction="vertical" />
-                    <el-tooltip :content="collabStatus === 'connected' ? '协同已连接' : collabStatus === 'connecting' ? '正在连接...' : '协同已断开'" placement="bottom">
+                    <el-tooltip :content="getCollabStatusText()" placement="bottom">
                         <el-tag
-                            :type="collabStatus === 'connected' ? 'success' : collabStatus === 'connecting' ? 'warning' : 'danger'"
+                            :type="getCollabTagType()"
                             size="small"
                             class="collab-status-tag"
                         >
@@ -227,7 +227,16 @@ import type { ComponentData, CanvasStyleData, ComponentStyle } from '@/types'
 import { validateAuto } from '@/utils/validation'
 import { exportToHtml, downloadHtmlFile } from '@/utils/exportHtml'
 import OnlineUsers from '@/components/OnlineUsers.vue'
-import { getCollab, initCollab } from '@/collab'
+import { getCollab, initCollab } from '@/collab/useCollabStore'
+import {
+    undo as undoAction,
+    redo as redoAction,
+    composeWithCommand,
+    decomposeWithCommand,
+    addComponentWithCommand,
+    clearCanvasWithCommand,
+    importDataWithCommand,
+} from '@/composables/useCommandActions'
 
 interface ExportData {
     version: string
@@ -243,8 +252,27 @@ const { componentData, canvasStyleData, areaData, curComponent, isDarkMode } = s
 // 协同编辑状态(响应式)
 const collabEnabled = ref(!!getCollab())
 const collabStatus = ref<'connecting' | 'connected' | 'disconnected'>(
-    getCollab()?.status.value ?? 'disconnected'
+    getCollab()?.status.value ?? 'disconnected',
 )
+let collabStatusTimer: number | null = null
+
+function getCollabStatusText(): string {
+    if (collabStatus.value === 'connected') return '协同已连接'
+    if (collabStatus.value === 'connecting') return '正在连接...'
+    return '协同已断开'
+}
+
+function getCollabTagType(): 'success' | 'warning' | 'danger' {
+    if (collabStatus.value === 'connected') return 'success'
+    if (collabStatus.value === 'connecting') return 'warning'
+    return 'danger'
+}
+
+onUnmounted(() => {
+    if (collabStatusTimer !== null) {
+        window.clearInterval(collabStatusTimer)
+    }
+})
 
 function toggleCollab(): void {
     if (collabEnabled.value) return
@@ -270,7 +298,7 @@ if (collabEnabled.value) {
     if (collab) {
         collabStatus.value = collab.status.value
         // 监听状态变化
-        const unwatch = setInterval(() => {
+        collabStatusTimer = window.setInterval(() => {
             const c = getCollab()
             if (c) collabStatus.value = c.status.value
         }, 1000)
@@ -329,10 +357,10 @@ function onAceEditorChange() { isShowAceEditor.value = !isShowAceEditor.value }
 function closeEditor() { onAceEditorChange() }
 function lock() { store.lock() }
 function unlock() { store.unlock() }
-function compose() { store.composeWithCommand() }
-function decompose() { store.decomposeWithCommand() }
-function undo() { store.undo() }
-function redo() { store.redo() }
+function compose() { composeWithCommand() }
+function decompose() { decomposeWithCommand() }
+function undo() { undoAction() }
+function redo() { redoAction() }
 
 function handleFileChange(e: Event): void {
     const target = e.target as HTMLInputElement
@@ -368,7 +396,7 @@ function handleFileChange(e: Event): void {
                 } as ComponentStyle,
             }
             changeComponentSizeWithScale(component)
-            store.addComponentWithCommand(component)
+            addComponentWithCommand(component)
 
             const input = $('#input') as HTMLInputElement
             if (input) { input.type = 'text'; input.type = 'file' }
@@ -410,8 +438,9 @@ async function saveToServer(): Promise<void> {
             canvasStyle: canvasStyleData.value,
         })
         ElMessage.success('已保存到服务器')
-    } catch (e: any) {
-        ElMessage.error('保存到服务器失败: ' + e.message)
+    } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : '未知错误'
+        ElMessage.error('保存到服务器失败: ' + message)
         // 回退到本地保存
         save()
     }
@@ -421,7 +450,7 @@ function clearCanvas(): void {
     ElMessageBox.confirm('确定要清空画布吗？', '提示', {
         confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning',
     }).then(() => {
-        store.clearCanvasWithCommand()
+        clearCanvasWithCommand()
         ElMessage.success('画布已清空')
     }).catch(() => {})
 }
@@ -478,7 +507,7 @@ function processJSON(): void {
 }
 
 function applyImport(components: ComponentData[], canvasStyle: CanvasStyleData | null): void {
-    store.importDataWithCommand(components, canvasStyle ?? undefined)
+    importDataWithCommand(components, canvasStyle ?? undefined)
     if (canvasStyle) { scale.value = canvasStyle.scale }
     ElMessage.success(`导入成功，共 ${components.length} 个组件`)
 }
@@ -735,3 +764,4 @@ function showVersionHistory(): void { isShowVersionHistory.value = true }
     gap: 10px;
 }
 </style>
+

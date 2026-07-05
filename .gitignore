@@ -4,6 +4,12 @@ node_modules
 
 
 # local env files
+.env
+.env.*
+!.env.example
+server/.env
+server/.env.*
+!server/.env.example
 .env.local
 .env.*.local
 

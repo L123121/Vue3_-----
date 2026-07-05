@@ -4,6 +4,7 @@
  */
 
 import { z } from 'zod'
+import type { ComponentData } from '@/types'
 
 // ==================== 组件样式 Schema ====================
 export const ComponentStyleSchema = z.object({
@@ -31,7 +32,7 @@ export const ComponentStyleSchema = z.object({
 // ==================== 请求配置 Schema ====================
 export const RequestConfigSchema = z.object({
     method: z.enum(['GET', 'POST', 'PUT', 'DELETE']),
-    data: z.array(z.record(z.unknown())).default([]),
+    data: z.array(z.record(z.string(), z.unknown())).default(() => []),
     url: z.string().default(''),
     series: z.boolean().default(false),
     time: z.number().default(1000),
@@ -44,7 +45,7 @@ export const AnimationSchema = z.object({
     type: z.string(),
     duration: z.number().default(1000),
     delay: z.number().default(0),
-    interationNum: z.number().default(1),
+    iterationNum: z.number().default(1),
     infinite: z.boolean().default(false),
     applyTo: z.enum(['enter', 'leave']),
 })
@@ -83,28 +84,11 @@ export const TablePropValueSchema = z.object({
 // ==================== 图表属性 Schema ====================
 export const ChartPropValueSchema = z.object({
     chart: z.string(),
-    option: z.record(z.unknown()).default({}),
+    option: z.record(z.string(), z.unknown()).default(() => ({})),
 })
 
 // ==================== 组件数据 Schema（递归定义）====================
-export const ComponentDataSchema: z.ZodType<{
-  id: string
-  component: string
-  label: string
-  icon: string
-  propValue: string | z.infer<typeof PicturePropValueSchema> | z.infer<typeof TablePropValueSchema> | z.infer<typeof ChartPropValueSchema> | unknown[]
-  style: z.infer<typeof ComponentStyleSchema>
-  parentId: string | null
-  slot: string
-  zIndex: number
-  request?: z.infer<typeof RequestConfigSchema>
-  animations: z.infer<typeof AnimationSchema>[]
-  events: Record<string, string>
-  groupStyle: Record<string, unknown>
-  isLock: boolean
-  collapseName: string
-  linkage: z.infer<typeof LinkageConfigSchema>
-}> = z.lazy(() =>
+export const ComponentDataSchema: z.ZodType<ComponentData> = z.lazy(() =>
     z.object({
         id: z.string(),
         component: z.string(),
@@ -124,12 +108,12 @@ export const ComponentDataSchema: z.ZodType<{
         slot: z.string().default('default'),
         zIndex: z.number().default(0),
         request: RequestConfigSchema.optional(),
-        animations: z.array(AnimationSchema).default([]),
-        events: z.record(z.string()).default({}),
-        groupStyle: z.record(z.unknown()).default({}),
+        animations: z.array(AnimationSchema).default(() => []),
+        events: z.record(z.string(), z.string()).default(() => ({})),
+        groupStyle: z.record(z.string(), z.unknown()).default(() => ({})),
         isLock: z.boolean().default(false),
         collapseName: z.string().default('style'),
-        linkage: LinkageConfigSchema.default({ duration: 0, data: [] }),
+        linkage: LinkageConfigSchema.default(() => ({ duration: 0, data: [] })),
     }),
 )
 
@@ -162,9 +146,14 @@ export const PageVersionSchema = z.object({
     thumbnail: z.string().optional(),
 })
 
-// ==================== 类型导出 ====================
+// ==================== 类型导出（从 Zod Schema 推导）====================
+/** 从 Schema 推导的组件样式类型 */
 export type ValidatedComponentStyle = z.infer<typeof ComponentStyleSchema>
+/** 从 Schema 推导的组件数据类型（递归） */
 export type ValidatedComponentData = z.infer<typeof ComponentDataSchema>
+/** 从 Schema 推导的画布样式类型 */
 export type ValidatedCanvasStyle = z.infer<typeof CanvasStyleSchema>
+/** 从 Schema 推导的导出数据类型 */
 export type ValidatedExportData = z.infer<typeof ExportDataSchema>
+/** 从 Schema 推导的版本快照类型 */
 export type ValidatedPageVersion = z.infer<typeof PageVersionSchema>

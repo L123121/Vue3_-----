@@ -1,5 +1,5 @@
 import { BaseCommand, getContext } from './BaseCommand'
-import { CommandType, type CommandEnvelope } from './types'
+import { CommandType, type Command, type CommandEnvelope } from './types'
 import { register } from './registry'
 import { nanoid } from 'nanoid'
 
@@ -33,14 +33,14 @@ export class RotateCommand extends BaseCommand {
         getContext().setStyle(this.componentId, { rotate: this.oldRotate })
     }
 
-    canMergeWith(other: import('./types').Command, _mergeTimeWindow: number): boolean {
+    canMergeWith(other: Command, _mergeTimeWindow: number): boolean {
         if (other.type !== CommandType.ROTATE_COMPONENT) return false
         if (!(other instanceof RotateCommand)) return false
 
         return this.componentId === other.componentId
     }
 
-    merge(other: import('./types').Command): RotateCommand {
+    merge(other: Command): RotateCommand {
         if (!(other instanceof RotateCommand)) return this
 
         return new RotateCommand(this.componentId, this.oldRotate, other.newRotate)

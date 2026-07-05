@@ -1,4 +1,3 @@
-import type { ComponentStyle } from '@/types'
 
 /**
  * 深拷贝函数

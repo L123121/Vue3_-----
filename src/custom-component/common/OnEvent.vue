@@ -35,6 +35,7 @@ export default {
             data.forEach(item => {
                 item.style.forEach(e => {
                     if (e.key) {
+                        // eslint-disable-next-line vue/no-mutating-props -- 联动配置需要直接修改画布元素样式
                         this.element.style[e.key] = e.value
                     }
                 })

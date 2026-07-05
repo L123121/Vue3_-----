@@ -124,7 +124,7 @@ import { useCommandHistory, restoreCommandHistory } from '@/composables/useComma
 import { useDragDrop } from '@/composables/useDragDrop'
 import { usePanelToggle } from '@/composables/usePanelToggle'
 import { validateComponentData, validateCanvasStyle } from '@/utils/validation'
-import { getCollab } from '@/collab'
+import { getCollab } from '@/collab/useCollabStore'
 
 const store = useStore()
 const route = useRoute()

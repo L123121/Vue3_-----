@@ -10,7 +10,7 @@
 export interface EventMap {
   runAnimation: []
   stopAnimation: []
-  preview: []
+  preview: [screenshot: boolean]
   save: []
   clearCanvas: []
   hideArea: []
@@ -37,10 +37,11 @@ class EventBus {
    */
     on<T extends EventName>(event: T, callback: EventCallback<T>): void {
         const list = this.events.get(event)
+        const cb = callback as (...args: unknown[]) => void
         if (list) {
-            list.push(callback)
+            list.push(cb)
         } else {
-            this.events.set(event, [callback])
+            this.events.set(event, [cb])
         }
     }
 
@@ -55,7 +56,8 @@ class EventBus {
         if (!callback) {
             this.events.set(event, [])
         } else {
-            this.events.set(event, list.filter(cb => cb !== callback))
+            const cb = callback as (...args: unknown[]) => void
+            this.events.set(event, list.filter(c => c !== cb))
         }
     }
 

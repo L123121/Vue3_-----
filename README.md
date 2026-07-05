@@ -2,7 +2,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/Vue-3.2+-brightgreen.svg" alt="vue">
-  <img src="https://img.shields.io/badge/Vite-4.x-blue.svg" alt="vite">
+  <img src="https://img.shields.io/badge/Vite-6.x-blue.svg" alt="vite">
   <img src="https://img.shields.io/badge/Pinia-2.x-yellow.svg" alt="pinia">
   <img src="https://img.shields.io/badge/Element--Plus-2.x-green.svg" alt="element-plus">
   <img src="https://img.shields.io/badge/TypeScript-5.x-blue.svg" alt="typescript">
@@ -89,8 +89,8 @@
 | | LineShape | 直线组件，支持颜色、粗细调整 |
 | **SVG 图形** | SVGStar | 星形组件，支持填充色、边框色设置 |
 | | SVGTriangle | 三角形组件，支持自定义尺寸 |
-| **高级组件** | VChart | ECharts 图表组件，支持柱状图、折线图、饼图等 |
-| | Group | 组合组件，支持多组件组合/拆分 |
+| **高级组件** | VChart | ECharts 图表组件（vue-echarts 按需引入），支持柱状图、散点图、折线图等 |
+| | Group | 组合组件（internal，不在组件面板显示），支持多组件组合/拆分 |
 
 ### 交互能力
 
@@ -109,13 +109,18 @@
 
 | 功能 | 描述 |
 | --- | --- |
-| **动画系统** | 集成 Animate.css，支持入场/离场动画，可配置时长、延迟、循环 |
-| **事件绑定** | 支持点击跳转、消息提示、确认弹窗等事件 |
-| **组件联动** | 组件间数据联动，一个组件触发另一个组件样式变化 |
-| **数据请求** | 支持配置 API 请求，动态获取组件数据，支持定时刷新 |
-| **右键菜单** | 提供快捷操作入口：复制、粘贴、删除、锁定、组合等 |
+| **动画系统** | 内嵌 Animate.css 关键帧子集（74 种：进入 33 + 强调 10 + 退出 31），支持入场/离场动画，可配置时长、延迟、循环 |
+| **事件绑定** | 支持 redirect（安全跳转，阻止 javascript: 协议）和 alert（弹窗提示）事件 |
+| **组件联动** | 组件间数据联动，一个组件触发另一个组件样式变化（v-click / v-hover） |
+| **数据请求** | 支持配置 API 请求（GET/POST/PUT/DELETE），动态获取组件数据，支持定时轮询与请求次数限制 |
+| **右键菜单** | 提供快捷操作入口：复制、粘贴、剪切、删除、锁定、组合等 |
 | **JSON 导入导出** | 一键导出页面 JSON 数据，导入时通过 Zod 运行时校验数据格式 |
-| **版本管理** | 保存页面历史版本，支持版本恢复和删除 |
+| **HTML 导出** | 将画布导出为自包含独立 HTML 文件（内联样式 + 动画关键帧 + 事件绑定），双击即可在浏览器打开 |
+| **版本管理** | 保存页面历史版本，支持版本恢复和删除，持久化到 localStorage |
+| **协同编辑** | 基于 Yjs CRDT 的多人实时协作，通过 `?collab=1` 启用，支持远程光标、在线用户感知、IndexedDB 持久化 |
+| **用户认证** | 登录/注册/仪表盘页面，基于 token 的路由守卫，REST API 后端服务 |
+| **命令时间线** | undo 历史可视化（CommandTimeline 组件），命令栈跨会话持久化到 IndexedDB |
+| **XSS 防护** | 使用 DOMPurify 净化富文本内容，HTML 导出时对 URL/CSS 进行安全校验 |
 
 ---
 
@@ -230,7 +235,7 @@ class CommandManager {
 // Shape.vue 拖拽核心逻辑（简化版）
 function handleMouseDownOnShape(e: MouseEvent): void {
   const pos = { ...props.defaultStyle }
-  let startY = e.clientY, startX = e.clientY
+  let startY = e.clientY, startX = e.clientX
   let startTop = pos.top, startLeft = pos.left
 
   // RAF 节流：每帧只更新一次 store
@@ -289,17 +294,24 @@ function handleMouseDownOnShape(e: MouseEvent): void {
 
 | 技术 | 版本 | 作用 |
 | --- | --- | --- |
-| **Vue 3** | 3.2+ | 核心框架，使用 Composition API 开发，响应式渲染组件 |
-| **TypeScript** | 5.x | 类型约束，保障 JSON 数据结构的类型安全与可扩展性 |
-| **Pinia** | 2.x | 状态管理，管理画布数据、组件状态及命令历史 |
-| **Vue Router** | 4.x | 路由管理，支持多页面编辑切换 |
-| **Element Plus** | 2.x | UI 组件库，用于属性面板和侧边栏 |
-| **Vite** | 4.x | 构建工具，极速的热更新体验 |
-| **Zod** | 4.x | 运行时数据校验，校验导入的 JSON 数据结构 |
-| **ECharts** | 5.x | 数据可视化支持 |
-| **Animate.css** | - | 提供丰富的预置动画效果 |
-| **Ace Editor** | 1.x | 代码编辑器，用于 JSON 数据编辑 |
-| **html-to-image** | 1.x | 页面截图导出 |
+| **Vue 3** | ^3.2.47 | 核心框架，使用 Composition API 开发，响应式渲染组件 |
+| **TypeScript** | ^5.7.0 | 类型约束，保障 JSON 数据结构的类型安全与可扩展性 |
+| **Pinia** | ^2.0.32 | 状态管理，管理画布数据、组件状态及命令历史 |
+| **Vue Router** | ^4.1.6 | 路由管理，支持多页面编辑切换与鉴权守卫 |
+| **Element Plus** | ^2.3.0 | UI 组件库，用于属性面板和侧边栏（全局 size: 'small'） |
+| **Vite** | ^6.1.0 | 构建工具，极速的热更新体验 |
+| **Zod** | ^4.3.6 | 运行时数据校验，校验导入的 JSON 数据结构 |
+| **ECharts** + **vue-echarts** | ^5.4.1 / ^6.5.4 | 数据可视化支持，VChart 组件按需引入图表类型 |
+| **Animate.css（内嵌）** | - | 动画关键帧，内嵌于 `src/styles/animate.scss` 编译使用（非 npm 依赖），含 74 种预置动画 |
+| **Ace Editor** | ^1.12.3（ace-builds） | 代码编辑器，用于 JSON 数据编辑 |
+| **html-to-image** | ^1.9.0 | 页面截图导出 |
+| **nanoid** | ^4.0.0 | 唯一 ID 生成，组件 ID 与版本 ID 均由 nanoid 生成 |
+| **axios** | ^1.18.1 | HTTP 请求库，用于用户认证与服务端 API 交互 |
+| **DOMPurify** | ^3.4.11 | XSS 防护，净化富文本内容与 HTML 导出输出 |
+| **Yjs** | ^13.6.31 | 协同编辑 CRDT 框架，支持多人实时协作（通过 `?collab=1` 启用） |
+| **y-websocket** | ^3.0.0 | Yjs WebSocket 通信层，连接协同服务器 |
+| **y-indexeddb** | ^9.0.12 | Yjs IndexedDB 持久化，协同数据本地缓存 |
+| **Vitest** | ^3.1.0 | 单元测试框架，测试文件位于各模块 `__tests__/` 目录 |
 
 ---
 
@@ -332,7 +344,7 @@ function handleMouseDownOnShape(e: MouseEvent): void {
 
 ### 环境要求
 
-- **Node.js** >= 16.0.0
+- **Node.js** >= 18.0.0
 - **npm** >= 7.0.0 (或 pnpm / yarn)
 
 ### 安装与运行
@@ -345,8 +357,20 @@ cd visual-drag-demo
 # 安装依赖
 npm install
 
-# 启动开发服务器
+# 准备前端环境变量
+cp .env.example .env.local
+
+# 准备后端环境变量（JWT_SECRET 请替换为足够长的随机字符串）
+cp server/.env.example server/.env
+
+# 启动开发服务器（端口 8080）
 npm run dev
+
+# 启动完整后端服务：REST API + 协同 WebSocket（端口 3000）
+npm run api
+
+# 仅启动旧版协同 WebSocket 服务（可选，端口 1234）
+npm run server
 
 # 生产构建
 npm run build
@@ -356,9 +380,21 @@ npm run type-check
 
 # 代码检查
 npm run lint
+
+# 单元测试
+npm run test:run
 ```
 
-访问 `http://localhost:8080` 即可开始编辑。
+访问 `http://localhost:8080` 即可开始编辑。在 URL 后加 `?collab=1` 可启用协同编辑模式。
+
+环境变量说明：
+
+| 文件 | 变量 | 说明 |
+| --- | --- | --- |
+| `.env.local` | `VITE_API_BASE` | 前端访问 REST API 的基础地址，默认 `http://localhost:3000` |
+| `.env.local` | `VITE_WS_URL` | Yjs WebSocket 地址；`npm run server` 用 `ws://localhost:1234`，`npm run api` 用 `ws://localhost:3000/ws` |
+| `server/.env` | `JWT_SECRET` | JWT 签名密钥，生产环境必须配置，不能提交真实密钥 |
+| `server/.env` | `CORS_ORIGIN` | 允许访问后端的前端域名，多个域名用逗号分隔 |
 
 ---
 
@@ -366,6 +402,14 @@ npm run lint
 
 ```text
 src/
+├── collab/                  # 协同编辑（Yjs CRDT，通过 ?collab=1 启用）
+│   ├── awareness.ts         # 用户在线状态与光标感知
+│   ├── commandContext.ts     # 协同模式下的命令上下文注入
+│   ├── index.ts             # 协同模块入口
+│   ├── provider.ts          # WebSocket Provider 封装
+│   ├── undoOrigin.ts        # Yjs UndoManager 集成
+│   ├── useCollabStore.ts    # 协同初始化 Hook（initCollab）
+│   └── yDoc.ts              # Yjs 文档与数据镜像
 ├── components/              # 编辑器核心 UI
 │   ├── Editor/              # 画布渲染引擎
 │   │   ├── index.vue        # 编辑器主入口
@@ -376,7 +420,10 @@ src/
 │   │   ├── ContextMenu.vue  # 右键菜单
 │   │   ├── Preview.vue      # 预览模式
 │   │   ├── AceEditor.vue    # JSON 编辑器
-│   │   └── ComponentWrapper.vue  # 组件包装器
+│   │   ├── ComponentWrapper.vue  # 组件包装器
+│   │   ├── NodeRenderer.vue      # 递归组件渲染器（parentId 嵌套）
+│   │   ├── PreviewNodeRenderer.vue # 预览模式递归渲染器
+│   │   └── RemoteCursors.vue     # 协同远程光标渲染
 │   ├── Toolbar.vue          # 顶部工具栏
 │   ├── ComponentList.vue    # 左侧组件列表
 │   ├── RealTimeComponentList.vue # 图层列表
@@ -385,6 +432,8 @@ src/
 │   ├── AnimationSettingModal.vue # 动画设置弹窗
 │   ├── EventList.vue        # 事件列表
 │   ├── VersionHistory.vue   # 版本历史
+│   ├── CommandTimeline.vue  # 命令时间线（undo 历史可视化）
+│   ├── OnlineUsers.vue      # 协同在线用户列表
 │   └── Modal.vue            # 通用弹窗
 ├── custom-component/        # 低代码组件实现
 │   ├── VText/               # 文本组件
@@ -392,42 +441,59 @@ src/
 │   │   └── Attr.vue         # 属性配置面板
 │   ├── VButton/             # 按钮组件
 │   ├── Picture/             # 图片组件
-│   ├── RectShape/           # 矩形组件
+│   ├── RectShape/           # 矩形组件（唯一 acceptChildren 容器）
 │   ├── CircleShape/         # 圆形组件
 │   ├── LineShape/           # 直线组件
-│   ├── VTable/              # 表格组件
-│   ├── VChart/              # 图表组件
-│   ├── Group/               # 组合组件
+│   ├── VTable/              # 表格组件（含 EditTable.vue 行列编辑）
+│   ├── VChart/              # 图表组件（vue-echarts 按需引入）
+│   ├── Group/               # 组合组件（internal，不在面板显示）
 │   ├── svgs/                # SVG 图形组件
 │   │   ├── SVGStar/         # 星形
 │   │   └── SVGTriangle/     # 三角形
 │   ├── common/              # 组件通用配置
 │   │   ├── CommonAttr.vue   # 通用属性面板
-│   │   ├── OnEvent.vue      # 事件配置
+│   │   ├── OnEvent.vue      # 事件配置（旧版，已被 useOnEvent.ts 替代）
+│   │   ├── useOnEvent.ts    # 事件联动 Hook（Composition API）
 │   │   ├── Request.vue      # 数据请求配置
 │   │   └── Linkage.vue      # 组件联动配置
+│   ├── controls/            # 属性面板基础控件
+│   │   ├── index.ts         # 控件注册映射表（controlMap）
+│   │   ├── InputControl.vue
+│   │   ├── TextareaControl.vue
+│   │   ├── NumberControl.vue
+│   │   ├── ColorControl.vue
+│   │   ├── SelectControl.vue
+│   │   └── SwitchControl.vue
+│   ├── PropPanelRenderer.vue # 元数据驱动属性面板渲染器
 │   ├── component-list.ts    # 组件模板列表
+│   ├── registry.ts          # 组件注册表（registerComponent API）
 │   └── index.ts             # 组件注册入口
 ├── composables/             # Composable 函数
 │   ├── useAutoSave.ts       # 自动保存（脏标记 + 防抖）
+│   ├── useCommandActions.ts # 命令操作（撤销/重做/命令执行）
+│   ├── useCommandHistory.ts # 命令历史跨会话持久化（IndexedDB）
+│   ├── useVersionManager.ts # 版本管理（保存/恢复/删除）
 │   ├── useDragDrop.ts       # 拖拽放置逻辑
 │   ├── usePanelToggle.ts    # 面板切换状态
 │   └── useEditorContext.ts  # 编辑器上下文（provide/inject）
 ├── store/                   # 状态管理
-│   └── index.ts             # Pinia Store（画布数据、命令历史、版本管理）
+│   ├── index.ts             # 主 Pinia Store（画布数据 + Yjs 镜像）
+│   └── auth.ts              # 用户认证 Store（token/user/login/register/logout）
 ├── types/                   # TypeScript 类型定义
-│   └── index.ts             # 核心类型定义
+│   └── index.ts             # 核心类型定义（无 enum，全用联合类型）
 ├── schemas/                 # Zod Schema 定义
-│   └── index.ts             # 运行时数据校验 Schema
+│   ├── index.ts             # 运行时数据校验 Schema（递归 ComponentDataSchema）
+│   └── __tests__/           # Schema 测试
 ├── commands/                # 命令模式实现
-│   ├── CommandManager.ts    # 命令管理器（双栈 + 合并）
-│   ├── BaseCommand.ts       # 命令基类
+│   ├── CommandManager.ts    # 命令管理器（双栈 + 合并 + 跨会话序列化）
+│   ├── BaseCommand.ts       # 命令基类（含 setCommandContext 上下文注入）
+│   ├── registry.ts          # 命令注册表（register + deserialize）
 │   ├── MoveCommand.ts       # 移动命令（可合并）
 │   ├── ResizeCommand.ts     # 缩放命令（可合并）
 │   ├── RotateCommand.ts     # 旋转命令（可合并）
 │   ├── AddComponentCommand.ts
-│   ├── DeleteComponentCommand.ts
-│   ├── LayerCommand.ts
+│   ├── DeleteComponentCommand.ts  # 级联删除子组件
+│   ├── LayerCommand.ts      # 图层命令（LAYER_UP/DOWN/TOP/BOTTOM）
 │   ├── ComposeCommand.ts
 │   ├── DecomposeCommand.ts
 │   ├── PasteCommand.ts
@@ -435,37 +501,52 @@ src/
 │   ├── ClearCanvasCommand.ts
 │   ├── ImportDataCommand.ts
 │   ├── BatchCommand.ts
+│   ├── setup.ts             # 命令注册入口（registerAllCommands）
 │   ├── index.ts
-│   └── types.ts
+│   ├── types.ts             # CommandType 枚举 + Command 接口
+│   └── __tests__/           # 命令测试（4 个测试文件）
 ├── utils/                   # 工具函数
-│   ├── utils.ts             # 通用工具函数（deepCopy、swap 等）
-│   ├── eventBus.ts          # 类型安全事件总线（EventMap 泛型）
-│   ├── generateID.ts        # ID 生成器
+│   ├── utils.ts             # 通用工具（deepCopy、swap、$、isPreventDrop）
+│   ├── eventBus.ts          # 类型安全事件总线（EventMap 泛型，含协同事件）
+│   ├── generateID.ts        # ID 生成器（nanoid）
 │   ├── style.ts             # 样式计算
 │   ├── translate.ts         # 坐标转换（旋转矩阵、缩放比例）
 │   ├── calculateComponentPositionAndSize.ts # 八点缩放计算
 │   ├── changeComponentsSizeWithScale.ts # 画布缩放适配
-│   ├── performance.ts       # 性能工具（RAF 节流、视口裁剪）
+│   ├── performance.ts       # 性能工具（RAF 节流、视口裁剪、拖拽状态）
 │   ├── validation.ts        # Zod 校验工具函数
-│   ├── request.ts           # 数据请求
+│   ├── request.ts           # 数据请求（XMLHttpRequest + 定时轮询）
+│   ├── api.ts               # 服务端 API 交互（axios + 认证）
+│   ├── attr.ts              # 属性面板配置数据
+│   ├── sanitize.ts          # XSS 净化（escapeHtml、isValidImageUrl、isValidCssColor）
+│   ├── exportHtml.ts        # HTML 导出引擎（组件→内联 HTML + 动画 + 事件）
 │   ├── shortcutKey.ts       # 快捷键处理（使用 e.key）
-│   ├── animationClassData.ts # 动画数据
+│   ├── animationClassData.ts # 动画分类数据（74 种：进入 33 + 强调 10 + 退出 31）
 │   ├── runAnimation.ts      # 动画执行
-│   ├── events.ts            # 事件处理
-│   └── decomposeComponent.ts # 组件拆分
+│   ├── events.ts            # 事件处理（redirect、alert）
+│   ├── decomposeComponent.ts # 组件拆分
+│   └── __tests__/           # 工具测试（8 个测试文件）
 ├── styles/                  # 全局样式
 │   ├── global.scss          # 全局样式
 │   ├── dark.scss            # 暗黑模式
-│   ├── animate.scss         # 动画样式
+│   ├── animate.scss         # 动画样式（内嵌 animate.css 关键帧子集）
 │   ├── variable.scss        # 样式变量
 │   └── reset.css            # 样式重置
 ├── views/                   # 页面入口
-│   └── Home.vue             # 主页面
+│   ├── Home.vue             # 编辑器主页面
+│   ├── PreviewPage.vue      # iframe 预览独立页面（/preview 路由）
+│   ├── Login.vue            # 登录页（/login，guest 守卫）
+│   ├── Register.vue         # 注册页（/register，guest 守卫）
+│   └── Dashboard.vue        # 仪表盘页（/dashboard，requiresAuth）
 ├── router/                  # 路由配置
-│   └── index.ts
+│   └── index.ts             # 6 条路由 + beforeEach 鉴权守卫
 ├── App.vue                  # 根组件
-├── main.ts                  # 入口文件
+├── main.ts                  # 入口文件（挂载插件 + 命令注册 + 协同初始化）
 └── env.d.ts                 # 环境类型声明
+
+server/                      # 后端服务（Node.js + ws）
+├── index.js                 # WebSocket 协同服务器
+└── app.js                   # REST API 服务（用户认证）
 ```
 
 ---
@@ -481,12 +562,15 @@ interface ComponentData {
   component: string          // 组件类型
   label: string              // 组件标签
   icon: string               // 图标
-  propValue: PropValue       // 组件属性值
+  propValue: PropValue       // 组件属性值（string | PicturePropValue | TablePropValue | ChartPropValue | ComponentData[]）
   style: ComponentStyle      // 样式配置
+  parentId: string | null    // 父组件 ID，null 表示根级组件
+  slot: string               // 插入的插槽名称
+  zIndex: number             // 视觉层级，值越大越靠上
   request?: RequestConfig    // 数据请求配置
   animations: Animation[]    // 动画列表
   events: Record<string, string>  // 事件配置
-  groupStyle: Record<string, unknown>  // 组合样式
+  groupStyle: Record<string, unknown>  // 组合样式（相对坐标）
   isLock: boolean            // 是否锁定
   collapseName: string       // 折叠面板名称
   linkage: LinkageConfig     // 联动配置
@@ -511,11 +595,12 @@ interface PageVersion {
 
 ### 添加新组件
 
-1. 在 `src/custom-component/` 下创建组件目录
-2. 创建 `Component.vue` 实现组件渲染
-3. 创建 `Attr.vue` 实现属性配置面板
-4. 在 `src/custom-component/component-list.ts` 中注册组件模板
-5. 在 `src/custom-component/index.ts` 中导出组件
+1. 在 `src/custom-component/` 下创建组件目录（含 `Component.vue` 和可选的 `Attr.vue`）
+2. 在 `src/custom-component/component-list.ts` 中添加组件模板（默认 propValue、style 等）
+3. 在 `src/custom-component/index.ts` 中调用 `registerComponent(type, component, meta, attrComponent?)` 注册
+4. 元数据 `meta` 中通过 `propConfigs` 声明属性面板配置（支持 input/textarea/number/color/select/switch 六种控件），有 propConfigs 时属性面板自动渲染，无则回退到 `Attr.vue`
+5. 容器组件需设置 `acceptChildren: true` 并在 Component.vue 中暴露 `<slot />`
+6. 内部组件（如 Group）设置 `internal: true`，不在组件面板显示但可参与渲染
 
 ### 组件开发示例
 
@@ -542,6 +627,20 @@ const style = computed(() => ({
   // ...其他样式
 }))
 </script>
+```
+
+```typescript
+// index.ts 中的注册示例
+registerComponent('MyComponent', MyComp, {
+  type: 'MyComponent',
+  label: '我的组件',
+  icon: 'myicon',
+  acceptChildren: false,
+  propConfigs: [
+    { key: 'propValue', label: '文字内容', type: 'textarea' },
+    { key: 'style.color', label: '文字颜色', type: 'color' },
+  ],
+}, MyAttr)
 ```
 
 ---

@@ -20,7 +20,7 @@ describe('escapeHtml - HTML 转义', () => {
     })
 
     it('单引号被转义', () => {
-        expect(escapeHtml("it's")).toBe('it&#x27;s')
+        expect(escapeHtml('it\'s')).toBe('it&#x27;s')
     })
 })
 

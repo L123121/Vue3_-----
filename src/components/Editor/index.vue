@@ -2,7 +2,7 @@
     <div
         id="editor"
         class="editor"
-        :class="{ edit: isEdit }"
+        :class="{ edit: props.isEdit }"
         :style="{
             ...getCanvasStyle(canvasStyleData),
             width: changeStyleWithScale(canvasStyleData.width) + 'px',
@@ -57,7 +57,7 @@ import { $, isPreventDrop } from '@/utils/utils'
 import { changeStyleWithScale } from '@/utils/translate'
 import { isInViewport } from '@/utils/performance'
 import { createRAFThrottle } from '@/utils/performance'
-import { getCollab } from '@/collab'
+import { getCollab } from '@/collab/useCollabStore'
 import type { ComponentData } from '@/types'
 
 interface Props {
@@ -312,7 +312,7 @@ function getSelectArea(): ComponentData[] {
         if (component.isLock) return
 
         const rotatedStyle = getComponentRotatedStyle(component.style)
-        const { left, top, right, bottom } = rotatedStyle
+        const { left = 0, top = 0, right = 0, bottom = 0 } = rotatedStyle
         const compWidth = right - left
         const compHeight = bottom - top
         if (

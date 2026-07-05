@@ -19,7 +19,7 @@
  */
 
 import { ref, type Ref } from 'vue'
-import * as Y from 'yjs'
+import type * as Y from 'yjs'
 import { useStore } from '@/store'
 import { createCollabDoc, readAllComponents, readCanvas, replaceAllComponents, type CollabDoc } from './yDoc'
 import { createProvider, resolveRoomName, type CollabProvider } from './provider'

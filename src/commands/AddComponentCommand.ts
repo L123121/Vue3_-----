@@ -1,5 +1,5 @@
 import { BaseCommand, getContext } from './BaseCommand'
-import { CommandType, type CommandEnvelope } from './types'
+import { CommandType, type Command, type CommandEnvelope } from './types'
 import { register } from './registry'
 import type { ComponentData } from '@/types'
 import { nanoid } from 'nanoid'
@@ -50,7 +50,7 @@ export class AddComponentCommand extends BaseCommand {
         return false
     }
 
-    merge(other: import('./types').Command): import('./types').Command {
+    merge(other: Command): Command {
         return other
     }
 }

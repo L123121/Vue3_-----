@@ -92,6 +92,12 @@ import { useStore } from '@/store'
 import { storeToRefs } from 'pinia'
 import { Plus, DocumentCopy, Folder, RefreshRight, Delete } from '@element-plus/icons-vue'
 import { ElMessageBox } from 'element-plus'
+import {
+    saveVersion,
+    restoreVersion,
+    deleteVersion,
+    loadVersionsFromStorage,
+} from '@/composables/useVersionManager'
 
 const store = useStore()
 const { versions } = storeToRefs(store)
@@ -120,7 +126,7 @@ function formatDate(dateStr: string): string {
 }
 
 function handleSave(): void {
-    store.saveVersion(form.value.name.trim(), form.value.description.trim())
+    saveVersion(form.value.name.trim(), form.value.description.trim())
     showSaveDialog.value = false
     form.value = { name: '', description: '' }
 }
@@ -135,7 +141,7 @@ function handleRestore(versionId: string): void {
             type: 'warning',
         },
     ).then(() => {
-        store.restoreVersion(versionId)
+        restoreVersion(versionId)
     }).catch(() => {
     // 用户取消
     })
@@ -151,14 +157,14 @@ function handleDelete(versionId: string): void {
             type: 'warning',
         },
     ).then(() => {
-        store.deleteVersion(versionId)
+        deleteVersion(versionId)
     }).catch(() => {
     // 用户取消
     })
 }
 
 onMounted(() => {
-    store.loadVersionsFromStorage()
+    loadVersionsFromStorage()
 })
 </script>
 

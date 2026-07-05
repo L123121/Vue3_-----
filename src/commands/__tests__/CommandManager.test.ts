@@ -1,11 +1,12 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { CommandManager } from '@/commands/CommandManager'
-import { setCommandContext, getContext } from '@/commands/BaseCommand'
+import { setCommandContext } from '@/commands/BaseCommand'
 import { MoveCommand } from '@/commands/MoveCommand'
 import { AddComponentCommand } from '@/commands/AddComponentCommand'
 import { useStore } from '@/store'
-import type { ComponentData, ComponentStyle, CommandContext, CopyData } from '@/types'
+import type { ComponentData, ComponentStyle, CopyData } from '@/types'
+import type { CommandContext } from '@/commands/types'
 
 /** 构造一个最小可用组件 */
 function makeComponent(id: string, top = 0, left = 0): ComponentData {
@@ -33,25 +34,25 @@ function makeComponent(id: string, top = 0, left = 0): ComponentData {
  */
 function createTestContext(store: ReturnType<typeof useStore>): CommandContext {
     return {
-        get(id) { return store.componentData.find(c => c.id === id) },
+        get(id: string) { return store.componentData.find(c => c.id === id) },
         getAll() { return store.componentData },
-        indexOf(id) { return store.componentData.findIndex(c => c.id === id) },
+        indexOf(id: string) { return store.componentData.findIndex(c => c.id === id) },
 
-        setStyle(id, patch) {
+        setStyle(id: string, patch: Partial<ComponentStyle>) {
             const comp = store.componentData.find(c => c.id === id)
             if (!comp) return
             Object.assign(comp.style, patch)
             store.markDataDirty()
         },
 
-        setProp(id, patch) {
+        setProp(id: string, patch: Record<string, unknown>) {
             const comp = store.componentData.find(c => c.id === id)
             if (!comp) return
             Object.assign(comp, patch)
             store.markDataDirty()
         },
 
-        insert(item, index) {
+        insert(item: ComponentData, index?: number) {
             if (index !== undefined && index >= 0 && index <= store.componentData.length) {
                 store.componentData.splice(index, 0, item)
             } else {
@@ -60,20 +61,20 @@ function createTestContext(store: ReturnType<typeof useStore>): CommandContext {
             store.markDataDirty()
         },
 
-        remove(id) {
+        remove(id: string) {
             const idx = store.componentData.findIndex(c => c.id === id)
             if (idx === -1) return null
             return this.removeAt(idx)
         },
 
-        removeAt(index) {
+        removeAt(index: number) {
             if (index < 0 || index >= store.componentData.length) return null
             const removed = store.componentData.splice(index, 1)[0] ?? null
             store.markDataDirty()
             return removed
         },
 
-        moveIndex(from, to) {
+        moveIndex(from: number, to: number) {
             if (from < 0 || from >= store.componentData.length) return
             if (to < 0 || to >= store.componentData.length) return
             const [item] = store.componentData.splice(from, 1)
@@ -81,7 +82,7 @@ function createTestContext(store: ReturnType<typeof useStore>): CommandContext {
             store.markDataDirty()
         },
 
-        replaceAll(list) {
+        replaceAll(list: ComponentData[]) {
             const backup = store.componentData.slice()
             store.componentData.splice(0, store.componentData.length, ...list)
             store.markDataDirty()
@@ -89,14 +90,14 @@ function createTestContext(store: ReturnType<typeof useStore>): CommandContext {
         },
 
         get curComponent() { return store.curComponent },
-        setCurComponent(id) {
+        setCurComponent(id: string | null) {
             if (id === null) { store.setCurComponent({ component: null, index: null }); return }
             const idx = store.componentData.findIndex(c => c.id === id)
             if (idx !== -1) store.setCurComponent({ component: store.componentData[idx], index: idx })
         },
 
         getCanvas() { return store.canvasStyleData },
-        setCanvas(patch) { Object.assign(store.canvasStyleData, patch); store.markDataDirty() },
+        setCanvas(patch: Record<string, unknown>) { Object.assign(store.canvasStyleData, patch); store.markDataDirty() },
 
         get editorEl() { return store.editor },
         get clipboard() { return store.copyData },

@@ -46,6 +46,7 @@ import { useStore } from '@/store'
 import { storeToRefs } from 'pinia'
 import { DataAnalysis, ArrowUp, ArrowDown, Delete } from '@element-plus/icons-vue'
 import type { ComponentData } from '@/types'
+import { layerOperation, deleteComponentWithCommand } from '@/composables/useCommandActions'
 
 const store = useStore()
 const { componentData, curComponent, rightList } = storeToRefs(store)
@@ -65,18 +66,18 @@ function onClick(item: ComponentData): void {
 
 function onUp(item: ComponentData): void {
     onClick(item)
-    store.layerOperation(item.id, 'up')
+    layerOperation(item.id, 'up')
 }
 
 function onDown(item: ComponentData): void {
     onClick(item)
-    store.layerOperation(item.id, 'down')
+    layerOperation(item.id, 'down')
 }
 
 function onDelete(item: ComponentData): void {
     const idx = componentData.value.findIndex(c => c.id === item.id)
     if (idx !== -1) {
-        store.deleteComponentWithCommand(item.id, idx)
+        deleteComponentWithCommand(item.id, idx)
     }
 }
 </script>

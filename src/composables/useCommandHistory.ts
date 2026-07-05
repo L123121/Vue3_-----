@@ -10,9 +10,10 @@
  */
 
 import { watch, onUnmounted } from 'vue'
-import { useStore } from '@/store'
 import { storeToRefs } from 'pinia'
+import { useStore } from '@/store'
 import type { CommandEnvelope } from '@/commands/types'
+import { exportCommandStack, importCommandStack } from '@/composables/useCommandActions'
 
 const DB_NAME = 'lowcode-collab'
 const STORE_NAME = 'command-history'
@@ -66,7 +67,7 @@ export function useCommandHistory(): void {
 
     async function persist(): Promise<void> {
         if (dataVersion.value === lastSavedVersion) return
-        const envelopes = store.exportCommandStack()
+        const envelopes = exportCommandStack()
         try {
             await idbSet(KEY, envelopes)
             lastSavedVersion = dataVersion.value
@@ -104,11 +105,10 @@ export function useCommandHistory(): void {
  * 应在协同初始化之后、用户操作之前调用。
  */
 export async function restoreCommandHistory(): Promise<void> {
-    const store = useStore()
     try {
         const envelopes = await idbGet<CommandEnvelope[]>(KEY)
         if (envelopes && Array.isArray(envelopes) && envelopes.length > 0) {
-            store.importCommandStack(envelopes)
+            importCommandStack(envelopes)
         }
     } catch (e) {
         console.warn('[command-history] 恢复失败:', e)

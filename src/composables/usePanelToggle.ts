@@ -1,6 +1,5 @@
 import { ref } from 'vue'
 import { useStore } from '@/store'
-import { storeToRefs } from 'pinia'
 
 /**
  * 面板切换 composable
@@ -12,7 +11,6 @@ export function usePanelToggle(): {
   isShowRight: () => void
   } {
     const store = useStore()
-    const { rightList } = storeToRefs(store)
 
     const leftList = ref(true)
 

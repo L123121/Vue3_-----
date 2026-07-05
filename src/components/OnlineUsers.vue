@@ -24,7 +24,7 @@
  * 用于协同场景的可视化(让用户感知"有人在和我一起编辑")。
  */
 import { ref, onMounted, onUnmounted } from 'vue'
-import { getCollab } from '@/collab'
+import { getCollab } from '@/collab/useCollabStore'
 
 interface UserEntry {
     clientId: number

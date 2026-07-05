@@ -26,12 +26,15 @@ import Page from './models/Page.js'
 
 const PORT = Number(process.env.PORT) || 3000
 const WS_PORT = Number(process.env.WS_PORT) || PORT
+const CORS_ORIGINS = process.env.CORS_ORIGIN
+    ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim()).filter(Boolean)
+    : []
 
 const app = express()
 const server = http.createServer(app)
 
 // ==================== 中间件 ====================
-app.use(cors())
+app.use(cors(CORS_ORIGINS.length > 0 ? { origin: CORS_ORIGINS, credentials: true } : undefined))
 app.use(express.json({ limit: '10mb' }))
 
 // ==================== REST API 路由 ====================
@@ -82,10 +85,10 @@ async function start() {
 
     server.listen(PORT, () => {
         console.log(`✅ API 服务: http://localhost:${PORT}`)
-        console.log(`   注册: POST /api/auth/register`)
-        console.log(`   登录: POST /api/auth/login`)
-        console.log(`   页面: GET/POST/PUT/DELETE /api/pages`)
-        console.log(`   分享: GET /api/shared/:token`)
+        console.log('   注册: POST /api/auth/register')
+        console.log('   登录: POST /api/auth/login')
+        console.log('   页面: GET/POST/PUT/DELETE /api/pages')
+        console.log('   分享: GET /api/shared/:token')
     })
 }
 

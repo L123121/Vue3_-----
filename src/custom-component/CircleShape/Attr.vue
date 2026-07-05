@@ -10,7 +10,6 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
 import { useStore } from '@/store'
 import { storeToRefs } from 'pinia'
 import CommonAttr from '@/custom-component/common/CommonAttr.vue'

@@ -10,6 +10,10 @@ import '@/styles/animate.scss'
 import '@/styles/reset.css'
 import '@/styles/global.scss'
 import '@/styles/dark.scss'
+import { registerAllCommands } from '@/commands/setup'
+
+// 初始化命令注册表
+registerAllCommands()
 
 const app = createApp(App)
 const pinia = createPinia()
@@ -24,8 +28,8 @@ app.mount('#app')
 // ==================== 协同编辑初始化 ====================
 // 通过 URL query ?collab=1 启用协同(默认单机,保持向后兼容)。
 // 协同启用时:注入命令上下文、连接 Yjs WebSocket + IndexedDB。
-import { useStore } from '@/store'
-import { initCollab } from '@/collab'
+import { initCollab } from '@/collab/useCollabStore'
+import { initCommandContext } from '@/composables/useCommandActions'
 
 const enableCollab = (() => {
     if (typeof window === 'undefined') return false
@@ -33,8 +37,7 @@ const enableCollab = (() => {
 })()
 
 if (enableCollab) {
-    const store = useStore()
-    store.initCommandContext()
+    initCommandContext()
     initCollab()
 }
 

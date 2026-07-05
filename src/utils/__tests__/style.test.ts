@@ -58,7 +58,7 @@ describe('getSVGStyle - SVG 组件样式', () => {
     })
 
     it('空字符串值被跳过', () => {
-        const result = getSVGStyle({ width: 100, height: 50, top: 0, left: 0, fontSize: '', color: '' })
+        const result = getSVGStyle({ width: 100, height: 50, top: 0, left: 0, fontSize: undefined, color: '' })
         expect(result.fontSize).toBeUndefined()
         expect(result.color).toBeUndefined()
     })
@@ -204,7 +204,7 @@ describe('createGroupStyle - 组合组件百分比坐标', () => {
         })
 
         // 已有 groupStyle 不应被覆盖
-        const child = groupComponent.propValue[0] as ComponentData
+        const child = (groupComponent.propValue as ComponentData[])[0]
         const original = { ...child.groupStyle }
         createGroupStyle(groupComponent)
         expect(child.groupStyle).toEqual(original)

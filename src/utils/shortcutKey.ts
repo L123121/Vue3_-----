@@ -1,5 +1,14 @@
 import { useStore } from '@/store'
 import eventBus from '@/utils/eventBus'
+import {
+    undo,
+    redo,
+    pasteWithCommand,
+    cutWithCommand,
+    composeWithCommand,
+    decomposeWithCommand,
+    deleteComponentWithCommand,
+} from '@/composables/useCommandActions'
 
 // 操作函数
 function copy(): void {
@@ -7,38 +16,21 @@ function copy(): void {
     store.copy()
 }
 
-function paste(): void {
-    const store = useStore()
-    store.pasteWithCommand()
-}
+const paste = pasteWithCommand
+const cut = cutWithCommand
 
-function cut(): void {
-    const store = useStore()
-    store.cutWithCommand()
-}
-
-function redo(): void {
-    const store = useStore()
-    store.redo()
-}
-
-function undo(): void {
-    const store = useStore()
-    store.undo()
-}
-
-function compose(): void {
+const compose = (): void => {
     const store = useStore()
     if (store.areaData.components.length) {
-        store.composeWithCommand()
+        composeWithCommand()
     }
 }
 
-function decompose(): void {
+const decompose = (): void => {
     const store = useStore()
     const curComponent = store.curComponent
     if (curComponent && !curComponent.isLock && curComponent.component === 'Group') {
-        store.decomposeWithCommand()
+        decomposeWithCommand()
     }
 }
 
@@ -47,14 +39,7 @@ function save(): void {
 }
 
 function preview(): void {
-    eventBus.emit('preview')
-}
-
-function deleteComponent(): void {
-    const store = useStore()
-    if (store.curComponent) {
-        store.deleteComponentWithCommand()
-    }
+    eventBus.emit('preview', true)
 }
 
 function clearCanvas(): void {
@@ -98,7 +83,7 @@ const unlockMap: KeyMap = {
     'x': cut,
     'g': compose,
     'b': decompose,
-    'd': deleteComponent,
+    'd': deleteComponentWithCommand,
     'l': lock,
 }
 
@@ -120,7 +105,7 @@ export function listenGlobalKeyDown(): () => void {
             isCtrlOrCommandDown = true
         } else if (key === 'delete' || key === 'backspace') {
             if (curComponent) {
-                store.deleteComponentWithCommand()
+                deleteComponentWithCommand()
             }
         } else if (isCtrlOrCommandDown) {
             if (unlockMap[key] && (!curComponent || !curComponent.isLock)) {

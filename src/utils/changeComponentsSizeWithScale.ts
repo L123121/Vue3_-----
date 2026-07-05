@@ -35,10 +35,11 @@ export default function changeComponentsSizeWithScale(
             if (needToChangeAttrs.includes(styleKey)) {
                 const newKey = Number((((component.style[styleKey] as number) / baseScale) * scale).toFixed(4))
 
+                const style = component.style as unknown as Record<string, number>
                 if (styleKey === 'top' || styleKey === 'left') {
-                    component.style[styleKey] = newKey
+                    style[styleKey] = newKey
                 } else {
-                    component.style[styleKey] = newKey === 0 ? 1 : newKey
+                    style[styleKey] = newKey === 0 ? 1 : newKey
                 }
             }
         })
@@ -85,11 +86,11 @@ export function changeComponentSizeWithScale(component: ComponentData): void {
     Object.keys(component.style).forEach(key => {
         const styleKey = key as keyof ComponentData['style']
         if (needToChangeAttrs2.includes(styleKey)) {
-            if (styleKey === 'fontSize' && component.style[styleKey] === '') return
+            if (styleKey === 'fontSize' && (component.style[styleKey] ?? 0) === 0) return
 
-            component.style[styleKey] = format(
-        component.style[styleKey] as number,
-        store.canvasStyleData.scale,
+            ;(component.style as unknown as Record<string, number>)[styleKey] = format(
+                component.style[styleKey] as number,
+                store.canvasStyleData.scale,
             )
         }
     })

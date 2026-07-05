@@ -4,8 +4,6 @@ export * from './types'
 export { BaseCommand, setCommandContext, getContext } from './BaseCommand'
 export { CommandManager, BatchOperation } from './CommandManager'
 export { register, deserialize, deserializeStack } from './registry'
-// 引入 registry 触发各命令模块的自注册(import 副作用)
-import './registry'
 export { MoveCommand } from './MoveCommand'
 export { ResizeCommand } from './ResizeCommand'
 export { RotateCommand } from './RotateCommand'

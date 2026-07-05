@@ -13,15 +13,18 @@ concurrency:
 
 jobs:
   lint-and-test:
+    strategy:
+      matrix:
+        node-version: [18, 20]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node
+      - name: Setup Node ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: ${{ matrix.node-version }}
           cache: npm
 
       - name: Install dependencies
@@ -31,15 +34,20 @@ jobs:
       - name: Lint
         run: npm run lint:check
 
+      - name: Type check
+        run: npm run type-check
+
       - name: Unit tests
         run: npm run test:run
 
-      # ----- 非阻塞：项目存在历史类型债（约 150 处 vue-tsc 报错），
-      # 待逐步清理后改为必过（移除 continue-on-error）-----
-      - name: Type check
-        run: npm run type-check
-        continue-on-error: true
-
       - name: Build
         run: npm run build
-        continue-on-error: true
+
+      # ----- 构建产物（仅上传一次，避免矩阵重复） -----
+      - name: Upload build artifact
+        if: ${{ matrix.node-version == 20 }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 7

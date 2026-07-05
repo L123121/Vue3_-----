@@ -41,8 +41,8 @@ export interface CommandEnvelope {
   id: string
   /** 命令类型，反序列化时按此查注册表 */
   type: CommandType
-  /** 描述（时间线 UI 显示） */
-  description: string
+  /** 描述（时间线 UI 显示，可选） */
+  description?: string
   /** 时间戳 */
   timestamp: number
   /** 命令数据（含撤销所需完整快照） */

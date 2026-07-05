@@ -64,9 +64,10 @@ function getComponentStyle(style: ComponentStyle): Record<string, string | numbe
 
 function onClick(): void {
     const eventMap = props.node.events
-    Object.keys(eventMap).forEach(key => {
-        if ((events as any)[key]) {
-            (events as any)[key](eventMap[key])
+    Object.entries(eventMap).forEach(([key, value]) => {
+        if (key in events) {
+            const eventKey = key as keyof typeof events
+            events[eventKey](value)
         }
     })
     eventBus.emit('v-click', props.node.id)

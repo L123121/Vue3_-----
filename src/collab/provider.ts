@@ -10,7 +10,6 @@
  *   provider.destroy()  // 组件卸载时
  */
 
-import * as Y from 'yjs'
 import { WebsocketProvider } from 'y-websocket'
 import { IndexeddbPersistence } from 'y-indexeddb'
 import type { CollabDoc } from './yDoc'
@@ -36,7 +35,7 @@ export interface ProviderOptions {
     onSynced?: () => void
 }
 
-const DEFAULT_WS_URL = 'ws://localhost:1234'
+const DEFAULT_WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:1234'
 
 export function createProvider(collabDoc: CollabDoc, options: ProviderOptions): CollabProvider {
     const { doc } = collabDoc

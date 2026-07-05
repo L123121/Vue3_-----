@@ -5,7 +5,7 @@
  * 新增控件类型只需在此添加一行。
  */
 
-import { h, type Component } from 'vue'
+import type { Component } from 'vue'
 import InputControl from './InputControl.vue'
 import TextareaControl from './TextareaControl.vue'
 import NumberControl from './NumberControl.vue'

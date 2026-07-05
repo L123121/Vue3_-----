@@ -12,7 +12,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, watch, onMounted, onUnmounted } from 'vue'
+import { reactive, watch } from 'vue'
 import { useEditorContext } from '@/composables/useEditorContext'
 import { useStore } from '@/store'
 import { storeToRefs } from 'pinia'
@@ -47,7 +47,7 @@ interface Condition {
 }
 
 // 使用节流优化吸附检测，限制为 ~60fps
-const throttledShowLine = throttle(showLine, 16)
+const throttledShowLine = throttle(showLine as (...args: unknown[]) => void, 16)
 
 // 通过 editorContext 监听移动状态（替代 eventBus）
 const { moveState } = useEditorContext()
@@ -76,26 +76,30 @@ function showLine(isDownward: boolean, isRightward: boolean): void {
     const curComponentStyle = getComponentRotatedStyle(curComponent.value.style)
     const curComponentHalfWidth = curComponentStyle.width / 2
     const curComponentHalfHeight = curComponentStyle.height / 2
+    const curTop = curComponentStyle.top ?? 0
+    const curLeft = curComponentStyle.left ?? 0
+    const curBottom = curComponentStyle.bottom ?? 0
+    const curRight = curComponentStyle.right ?? 0
 
     hideLine()
     components.forEach(component => {
         if (component === curComponent.value) return
         const componentStyle = getComponentRotatedStyle(component.style)
-        const { top, left, bottom, right } = componentStyle
+        const { top = 0, left = 0, bottom = 0, right = 0 } = componentStyle
         const componentHalfWidth = componentStyle.width / 2
         const componentHalfHeight = componentStyle.height / 2
 
         const conditions: Record<'top' | 'left', Condition[]> = {
             top: [
                 {
-                    isNearly: isNearly(curComponentStyle.top, top),
+                    isNearly: isNearly(curTop, top),
                     lineNode: lineRefs.xt,
                     line: 'xt',
                     dragShift: top,
                     lineShift: top,
                 },
                 {
-                    isNearly: isNearly(curComponentStyle.bottom, top),
+                    isNearly: isNearly(curBottom, top),
                     lineNode: lineRefs.xt,
                     line: 'xt',
                     dragShift: top - curComponentStyle.height,
@@ -104,7 +108,7 @@ function showLine(isDownward: boolean, isRightward: boolean): void {
                 {
                     // 组件与拖拽节点的中间是否对齐
                     isNearly: isNearly(
-                        curComponentStyle.top + curComponentHalfHeight,
+                        curTop + curComponentHalfHeight,
                         top + componentHalfHeight,
                     ),
                     lineNode: lineRefs.xc,
@@ -113,14 +117,14 @@ function showLine(isDownward: boolean, isRightward: boolean): void {
                     lineShift: top + componentHalfHeight,
                 },
                 {
-                    isNearly: isNearly(curComponentStyle.top, bottom),
+                    isNearly: isNearly(curTop, bottom),
                     lineNode: lineRefs.xb,
                     line: 'xb',
                     dragShift: bottom,
                     lineShift: bottom,
                 },
                 {
-                    isNearly: isNearly(curComponentStyle.bottom, bottom),
+                    isNearly: isNearly(curBottom, bottom),
                     lineNode: lineRefs.xb,
                     line: 'xb',
                     dragShift: bottom - curComponentStyle.height,
@@ -129,14 +133,14 @@ function showLine(isDownward: boolean, isRightward: boolean): void {
             ],
             left: [
                 {
-                    isNearly: isNearly(curComponentStyle.left, left),
+                    isNearly: isNearly(curLeft, left),
                     lineNode: lineRefs.yl,
                     line: 'yl',
                     dragShift: left,
                     lineShift: left,
                 },
                 {
-                    isNearly: isNearly(curComponentStyle.right, left),
+                    isNearly: isNearly(curRight, left),
                     lineNode: lineRefs.yl,
                     line: 'yl',
                     dragShift: left - curComponentStyle.width,
@@ -145,7 +149,7 @@ function showLine(isDownward: boolean, isRightward: boolean): void {
                 {
                     // 组件与拖拽节点的中间是否对齐
                     isNearly: isNearly(
-                        curComponentStyle.left + curComponentHalfWidth,
+                        curLeft + curComponentHalfWidth,
                         left + componentHalfWidth,
                     ),
                     lineNode: lineRefs.yc,
@@ -154,14 +158,14 @@ function showLine(isDownward: boolean, isRightward: boolean): void {
                     lineShift: left + componentHalfWidth,
                 },
                 {
-                    isNearly: isNearly(curComponentStyle.left, right),
+                    isNearly: isNearly(curLeft, right),
                     lineNode: lineRefs.yr,
                     line: 'yr',
                     dragShift: right,
                     lineShift: right,
                 },
                 {
-                    isNearly: isNearly(curComponentStyle.right, right),
+                    isNearly: isNearly(curRight, right),
                     lineNode: lineRefs.yr,
                     line: 'yr',
                     dragShift: right - curComponentStyle.width,

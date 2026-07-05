@@ -76,11 +76,9 @@ import { storeToRefs } from 'pinia'
 import Shape from './Shape.vue'
 import {
     getShapeStyle as getShapeStyleUtils,
-    getComponentRotatedStyle,
     getSVGStyle as getSVGStyleUtils,
     getStyle,
 } from '@/utils/style'
-import { changeStyleWithScale } from '@/utils/translate'
 import type { ComponentData, ComponentStyle } from '@/types'
 
 interface Props {
@@ -125,14 +123,11 @@ function handleInput(element: ComponentData, value: string): void {
 }
 
 function getTextareaHeight(element: ComponentData, text: string): number {
-    let { lineHeight } = element.style
-    const { fontSize, height } = element.style
-    if (lineHeight === '' || lineHeight === undefined) {
-        lineHeight = 1.5
-    }
+    const { fontSize, height, lineHeight: rawLineHeight } = element.style
+    const lineHeight = rawLineHeight ? parseFloat(rawLineHeight) : 1.5
 
     const newHeight =
-    (text.split('<br>').length - 1) * (lineHeight as number) * (fontSize || canvasStyleData.value.fontSize)
+    (text.split('<br>').length - 1) * lineHeight * (fontSize || canvasStyleData.value.fontSize)
     return height > newHeight ? height : newHeight
 }
 </script>

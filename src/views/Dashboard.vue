@@ -3,11 +3,15 @@
         <!-- 顶部导航 -->
         <header class="header">
             <div class="header-left">
-                <h1 class="logo">低代码平台</h1>
+                <h1 class="logo">
+                    低代码平台
+                </h1>
             </div>
             <div class="header-right">
                 <span class="welcome">欢迎, {{ auth.username }}</span>
-                <el-button size="small" @click="handleLogout">退出</el-button>
+                <el-button size="small" @click="handleLogout">
+                    退出
+                </el-button>
             </div>
         </header>
 
@@ -41,17 +45,31 @@
                     @click="openPage(page._id)"
                 >
                     <div class="card-body">
-                        <div class="card-title">{{ page.title }}</div>
-                        <div class="card-desc">{{ page.description || '暂无描述' }}</div>
+                        <div class="card-title">
+                            {{ page.title }}
+                        </div>
+                        <div class="card-desc">
+                            {{ page.description || '暂无描述' }}
+                        </div>
                     </div>
                     <div class="card-footer">
                         <span class="date">{{ formatDate(page.updatedAt) }}</span>
                         <div class="card-actions" @click.stop>
                             <el-tooltip v-if="page.isPublic" content="已分享" placement="top">
-                                <el-button text :icon="Share" size="small" @click="copyShareLink(page._id)" />
+                                <el-button
+                                    text
+                                    :icon="Share"
+                                    size="small"
+                                    @click="copyShareLink(page._id)"
+                                />
                             </el-tooltip>
                             <el-tooltip content="分享" placement="top">
-                                <el-button text :icon="Share" size="small" @click="sharePage(page._id)" />
+                                <el-button
+                                    text
+                                    :icon="Share"
+                                    size="small"
+                                    @click="sharePage(page._id)"
+                                />
                             </el-tooltip>
                             <el-popconfirm
                                 title="确定删除这个页面吗？"
@@ -59,7 +77,12 @@
                                 @confirm="deletePage(page._id)"
                             >
                                 <template #reference>
-                                    <el-button text type="danger" :icon="Delete" size="small" />
+                                    <el-button
+                                        text
+                                        type="danger"
+                                        :icon="Delete"
+                                        size="small"
+                                    />
                                 </template>
                             </el-popconfirm>
                         </div>
@@ -73,15 +96,15 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import { Plus, Share, Delete } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/store/auth'
-import { pagesApi } from '@/utils/api'
+import { getErrorMessage, pagesApi, type PageSummary } from '@/utils/api'
 
 const router = useRouter()
 const auth = useAuthStore()
 
-const pages = ref<any[]>([])
+const pages = ref<PageSummary[]>([])
 const loading = ref(true)
 
 async function fetchPages() {
@@ -89,8 +112,8 @@ async function fetchPages() {
     try {
         const res = await pagesApi.list()
         pages.value = res.pages
-    } catch (e: any) {
-        ElMessage.error(e.message)
+    } catch (e: unknown) {
+        ElMessage.error(getErrorMessage(e))
     } finally {
         loading.value = false
     }
@@ -98,7 +121,9 @@ async function fetchPages() {
 
 function formatDate(dateStr: string): string {
     const d = new Date(dateStr)
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+    const date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    const time = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+    return `${date} ${time}`
 }
 
 function openPage(id: string) {
@@ -109,8 +134,8 @@ async function createPage() {
     try {
         const res = await pagesApi.create({ title: '未命名页面' })
         router.push(`/editor/${res.page._id}`)
-    } catch (e: any) {
-        ElMessage.error(e.message)
+    } catch (e: unknown) {
+        ElMessage.error(getErrorMessage(e))
     }
 }
 
@@ -119,8 +144,8 @@ async function deletePage(id: string) {
         await pagesApi.delete(id)
         ElMessage.success('已删除')
         pages.value = pages.value.filter(p => p._id !== id)
-    } catch (e: any) {
-        ElMessage.error(e.message)
+    } catch (e: unknown) {
+        ElMessage.error(getErrorMessage(e))
     }
 }
 
@@ -131,8 +156,8 @@ async function sharePage(id: string) {
         ElMessage.success('分享链接已复制到剪贴板')
         // 刷新列表更新分享状态
         await fetchPages()
-    } catch (e: any) {
-        ElMessage.error(e.message)
+    } catch (e: unknown) {
+        ElMessage.error(getErrorMessage(e))
     }
 }
 
@@ -141,8 +166,8 @@ async function copyShareLink(id: string) {
         const res = await pagesApi.share(id)
         await copyToClipboard(res.shareUrl)
         ElMessage.success('分享链接已复制')
-    } catch (e: any) {
-        ElMessage.error(e.message)
+    } catch (e: unknown) {
+        ElMessage.error(getErrorMessage(e))
     }
 }
 

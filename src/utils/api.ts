@@ -7,6 +7,50 @@
 
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
+import type { ComponentData, CanvasStyleData } from '@/types'
+
+
+export interface UserInfo {
+    _id: string
+    username: string
+    email: string
+    avatar?: string
+    createdAt?: string
+    updatedAt?: string
+}
+
+export interface AuthResponse {
+    token: string
+    user: UserInfo
+}
+
+export interface PageInfo {
+    _id: string
+    title: string
+    description?: string
+    userId?: string
+    componentData: ComponentData[]
+    canvasStyle: CanvasStyleData
+    shareToken?: string | null
+    isPublic: boolean
+    createdAt: string
+    updatedAt: string
+}
+
+export type PageSummary = Pick<PageInfo, '_id' | 'title' | 'description' | 'createdAt' | 'updatedAt' | 'isPublic'>
+
+export interface PagePayload {
+    title?: string
+    description?: string
+    componentData?: ComponentData[]
+    canvasStyle?: CanvasStyleData
+}
+
+export function getErrorMessage(error: unknown, fallback = '请求失败'): string {
+    if (error instanceof Error) return error.message
+    if (typeof error === 'string') return error
+    return fallback
+}
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
 
@@ -48,10 +92,10 @@ api.interceptors.response.use(
 
 export const authApi = {
     register(data: { username: string; email: string; password: string }) {
-        return api.post('/api/auth/register', data) as Promise<{ token: string; user: any }>
+        return api.post('/api/auth/register', data) as Promise<AuthResponse>
     },
     login(data: { username: string; password: string }) {
-        return api.post('/api/auth/login', data) as Promise<{ token: string; user: any }>
+        return api.post('/api/auth/login', data) as Promise<AuthResponse>
     },
 }
 
@@ -59,16 +103,16 @@ export const authApi = {
 
 export const pagesApi = {
     list() {
-        return api.get('/api/pages') as Promise<{ pages: any[] }>
+        return api.get('/api/pages') as Promise<{ pages: PageSummary[] }>
     },
     get(id: string) {
-        return api.get(`/api/pages/${id}`) as Promise<{ page: any }>
+        return api.get(`/api/pages/${id}`) as Promise<{ page: PageInfo }>
     },
-    create(data: { title?: string; description?: string; componentData?: any[]; canvasStyle?: any }) {
-        return api.post('/api/pages', data) as Promise<{ page: any }>
+    create(data: PagePayload) {
+        return api.post('/api/pages', data) as Promise<{ page: PageInfo }>
     },
-    update(id: string, data: { title?: string; description?: string; componentData?: any[]; canvasStyle?: any }) {
-        return api.put(`/api/pages/${id}`, data) as Promise<{ page: any }>
+    update(id: string, data: PagePayload) {
+        return api.put(`/api/pages/${id}`, data) as Promise<{ page: PageInfo }>
     },
     delete(id: string) {
         return api.delete(`/api/pages/${id}`) as Promise<{ message: string }>

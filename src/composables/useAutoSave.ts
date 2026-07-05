@@ -1,7 +1,7 @@
 import { watch, onUnmounted } from 'vue'
 import { useStore } from '@/store'
 import { storeToRefs } from 'pinia'
-import { getCollab } from '@/collab'
+import { getCollab } from '@/collab/useCollabStore'
 
 /**
  * 自动保存 composable

@@ -1,6 +1,14 @@
 import jwt from 'jsonwebtoken'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'lowcode-jwt-secret-change-in-production'
+const DEFAULT_DEV_JWT_SECRET = 'dev-only-lowcode-jwt-secret'
+const JWT_SECRET = process.env.JWT_SECRET || DEFAULT_DEV_JWT_SECRET
+
+if (!process.env.JWT_SECRET) {
+    if (process.env.NODE_ENV === 'production') {
+        throw new Error('JWT_SECRET is required in production')
+    }
+    console.warn('[auth] JWT_SECRET 未配置，当前仅使用开发环境默认密钥')
+}
 
 /**
  * JWT 认证中间件

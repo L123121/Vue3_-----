@@ -7,6 +7,7 @@ import componentList from '@/custom-component/component-list'
 import { changeComponentSizeWithScale } from '@/utils/changeComponentsSizeWithScale'
 import { isContainer } from '@/custom-component/registry'
 import type { ComponentData } from '@/types'
+import { addComponentWithCommand } from '@/composables/useCommandActions'
 
 /**
  * 拖拽放置 composable
@@ -71,7 +72,7 @@ export function useDragDrop(): {
 
             component.id = generateID()
             changeComponentSizeWithScale(component)
-            store.addComponentWithCommand(component)
+            addComponentWithCommand(component)
         }
     }
 

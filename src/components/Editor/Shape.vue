@@ -1,4 +1,6 @@
-<template>
+    }) as (...args: unknown[]) => void)
+
+    const move<template>
     <div
         ref="shapeRef"
         class="shape"
@@ -24,7 +26,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
 import { useStore } from '@/store'
 import { storeToRefs } from 'pinia'
 import { RefreshRight, Lock } from '@element-plus/icons-vue'
@@ -36,6 +38,7 @@ import { mod360 } from '@/utils/translate'
 import { isPreventDrop } from '@/utils/utils'
 import { createRAFThrottle } from '@/utils/performance'
 import type { ComponentData, ComponentStyle } from '@/types'
+import { moveComponent, resizeComponent, rotateComponent } from '@/composables/useCommandActions'
 
 interface Props {
   active?: boolean
@@ -147,9 +150,9 @@ function handleRotate(e: MouseEvent): void {
     let newRotate = startRotate
 
     // 使用 RAF 批处理优化旋转更新
-    const throttledSetShapeStyle = createRAFThrottle((style: ComponentStyle) => {
+    const throttledSetShapeStyle = createRAFThrottle(((style: ComponentStyle) => {
         store.setShapeStyle(style)
-    })
+    }) as (...args: unknown[]) => void)
 
     const move = (moveEvent: MouseEvent): void => {
         hasMove = true
@@ -165,7 +168,7 @@ function handleRotate(e: MouseEvent): void {
     }
 
     const up = (): void => {
-        if (hasMove) store.rotateComponent(props.element.id, startRotate, newRotate)
+        if (hasMove) rotateComponent(props.element.id, startRotate, newRotate)
         document.removeEventListener('mousemove', move)
         document.removeEventListener('mouseup', up)
         document.removeEventListener('selectstart', preventSelect)
@@ -280,7 +283,7 @@ function handleMouseDownOnShape(e: MouseEvent): void {
     let hasMove = false
 
     // RAF 节流：将当前位移提交到 store 并重设基线，让 transform 始终保持微量偏移
-    const throttledMove = createRAFThrottle((curX: number, curY: number) => {
+    const throttledMove = createRAFThrottle(((curX: number, curY: number) => {
         const newTop = startTop + (curY - startY)
         const newLeft = startLeft + (curX - startX)
         pos.top = newTop
@@ -301,7 +304,7 @@ function handleMouseDownOnShape(e: MouseEvent): void {
         if (shapeRef.value) {
             shapeRef.value.style.transform = ''
         }
-    })
+    }) as (...args: unknown[]) => void)
 
     const move = (moveEvent: MouseEvent): void => {
         hasMove = true
@@ -325,7 +328,7 @@ function handleMouseDownOnShape(e: MouseEvent): void {
 
         if (hasMove) {
             store.setShapeStyle(pos)
-            store.moveComponent(props.element.id, oldStyle, newStyle)
+            moveComponent(props.element.id, oldStyle, newStyle)
         }
 
         editorCtx.stopMove()
@@ -401,9 +404,9 @@ function handleMouseDownOnPoint(point: string, e: MouseEvent): void {
     document.addEventListener('selectstart', preventSelect)
 
     // 使用 RAF 批处理优化缩放更新
-    const throttledSetShapeStyle = createRAFThrottle((style: ComponentStyle) => {
+    const throttledSetShapeStyle = createRAFThrottle(((style: ComponentStyle) => {
         store.setShapeStyle(style)
-    })
+    }) as (...args: unknown[]) => void)
 
     const needLockProportion = isNeedLockProportion()
     const move = (moveEvent: MouseEvent): void => {
@@ -447,7 +450,7 @@ function handleMouseDownOnPoint(point: string, e: MouseEvent): void {
                 top: style.top,
                 left: style.left,
             }
-            store.resizeComponent(props.element.id, oldStyle, newStyle)
+            resizeComponent(props.element.id, oldStyle, newStyle)
         }
     }
 

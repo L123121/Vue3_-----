@@ -2,8 +2,12 @@
     <div class="auth-page">
         <div class="auth-card">
             <div class="auth-header">
-                <h1 class="logo">低代码平台</h1>
-                <p class="subtitle">创建新账户</p>
+                <h1 class="logo">
+                    低代码平台
+                </h1>
+                <p class="subtitle">
+                    创建新账户
+                </p>
             </div>
 
             <el-form
@@ -55,7 +59,9 @@
 
             <div class="auth-footer">
                 已有账户？
-                <router-link to="/login" class="link">立即登录</router-link>
+                <router-link to="/login" class="link">
+                    立即登录
+                </router-link>
             </div>
         </div>
     </div>
@@ -67,6 +73,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { User, Lock, Message } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/store/auth'
+import { getErrorMessage } from '@/utils/api'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -106,8 +113,8 @@ async function handleRegister() {
             })
             ElMessage.success('注册成功')
             router.push('/dashboard')
-        } catch (e: any) {
-            ElMessage.error(e.message)
+        } catch (e: unknown) {
+            ElMessage.error(getErrorMessage(e))
         } finally {
             loading.value = false
         }

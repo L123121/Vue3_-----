@@ -84,7 +84,7 @@ describe('exportToHtml - HTML 导出引擎', () => {
         const html = exportToHtml({
             title: '',
             componentData: [makeComponent({
-                animations: [{ type: 'fadeIn', duration: 1000, delay: 0, interationNum: 1, infinite: false, applyTo: 'enter' }],
+                animations: [{ type: 'fadeIn', duration: 1000, delay: 0, iterationNum: 1, infinite: false, applyTo: 'enter' }],
             })],
             canvasStyle,
         })

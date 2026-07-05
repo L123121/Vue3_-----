@@ -37,6 +37,7 @@ import { ref, computed, reactive } from 'vue'
 import { useStore } from '@/store'
 import { storeToRefs } from 'pinia'
 import eventBus from '@/utils/eventBus'
+import type { Animation } from '@/types'
 
 interface AnimationConfig {
   label: string
@@ -68,19 +69,16 @@ const config = reactive<AnimationConfig>({
 })
 
 const isDisabled = computed((): boolean => {
-    return curComponent.value.animations.length > 1
+    return (curComponent.value?.animations.length ?? 0) > 1
 })
 
 // Initialize config
-const animation = curComponent.value.animations[props.curIndex]
+const animation: Animation | undefined = curComponent.value?.animations?.[props.curIndex]
 if (animation) {
-    const { label, animationTime, isLoop = false, value } = animation
-    Object.assign(config, {
-        animationTime,
-        label,
-        isLoop,
-        value,
-    })
+    config.label = animation.label ?? ''
+    config.animationTime = animation.duration / 1000
+    config.isLoop = animation.infinite
+    config.value = animation.type
 }
 
 function handleCloseModal(): void {
@@ -88,12 +86,11 @@ function handleCloseModal(): void {
 }
 
 function handleSaveSetting(): void {
-    const { isLoop } = config
     store.alterAnimation({
         index: props.curIndex,
         data: {
-            animationTime: config.animationTime,
-            isLoop,
+            duration: config.animationTime * 1000,
+            infinite: config.isLoop,
         },
     })
     eventBus.emit('stopAnimation')

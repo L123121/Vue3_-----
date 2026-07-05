@@ -1,5 +1,5 @@
 import { BaseCommand, getContext } from './BaseCommand'
-import { CommandType, type PositionData, type CommandEnvelope } from './types'
+import { CommandType, type PositionData, type Command, type CommandEnvelope } from './types'
 import { register } from './registry'
 import type { ComponentStyle } from '@/types'
 import { nanoid } from 'nanoid'
@@ -52,14 +52,14 @@ export class MoveCommand extends BaseCommand {
         }))
     }
 
-    canMergeWith(other: import('./types').Command, _mergeTimeWindow: number): boolean {
+    canMergeWith(other: Command, _mergeTimeWindow: number): boolean {
         if (other.type !== CommandType.MOVE_COMPONENT) return false
         if (!(other instanceof MoveCommand)) return false
 
         return this.positionData.componentId === other.positionData.componentId
     }
 
-    merge(other: import('./types').Command): MoveCommand {
+    merge(other: Command): MoveCommand {
         if (!(other instanceof MoveCommand)) return this
 
         return new MoveCommand(
