@@ -1,11 +1,13 @@
 <template>
     <div
+        ref="wrapperRef"
         class="preview-node-wrapper"
         @click="onClick"
         @mouseenter="onMouseEnter"
     >
         <component
             :is="node.component"
+            ref="componentRef"
             :style="getComponentStyle(node.style)"
             :class="['component', node.component.startsWith('SVG') ? 'svg-component' : '']"
             :prop-value="node.propValue"
@@ -42,6 +44,7 @@ const props = defineProps<Props>()
 const store = useStore()
 
 const wrapperRef = ref<HTMLElement | null>(null)
+const componentRef = ref<{ $el?: HTMLElement } | HTMLElement | null>(null)
 
 // 查找当前组件的所有子组件
 const children = computed(() => {
@@ -50,8 +53,9 @@ const children = computed(() => {
 
 onMounted(() => {
     // 挂载时执行动画
-    if (wrapperRef.value?.parentElement) {
-        runAnimation(wrapperRef.value.parentElement, props.node.animations)
+    const target = componentRef.value instanceof HTMLElement ? componentRef.value : componentRef.value?.$el
+    if (target) {
+        runAnimation(target, props.node.animations)
     }
 })
 

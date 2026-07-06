@@ -11,6 +11,8 @@ import '@/styles/reset.css'
 import '@/styles/global.scss'
 import '@/styles/dark.scss'
 import { registerAllCommands } from '@/commands/setup'
+import { initCommandContext } from '@/composables/useCommandActions'
+import { initCollab } from '@/collab/useCollabStore'
 
 // 初始化命令注册表
 registerAllCommands()
@@ -23,13 +25,14 @@ app.use(router)
 app.use(pinia)
 app.use(installCustomComponents)
 
+// 命令系统在单机和协同模式下都需要上下文
+initCommandContext()
+
 app.mount('#app')
 
 // ==================== 协同编辑初始化 ====================
 // 通过 URL query ?collab=1 启用协同(默认单机,保持向后兼容)。
-// 协同启用时:注入命令上下文、连接 Yjs WebSocket + IndexedDB。
-import { initCollab } from '@/collab/useCollabStore'
-import { initCommandContext } from '@/composables/useCommandActions'
+// 协同启用时:连接 Yjs WebSocket + IndexedDB。
 
 const enableCollab = (() => {
     if (typeof window === 'undefined') return false
@@ -37,7 +40,6 @@ const enableCollab = (() => {
 })()
 
 if (enableCollab) {
-    initCommandContext()
     initCollab()
 }
 

@@ -21,6 +21,7 @@ import { applyLocalChange, getCollab } from '@/collab/useCollabStore'
 import { createCommandContext } from '@/collab/commandContext'
 import { replaceAllComponents, fromComponentData, findYMapIndex, writeCanvas } from '@/collab/yDoc'
 import { isApplyingRemote } from '@/collab/undoOrigin'
+import { moveArrayItem, normalizeComponentLayerOrder, normalizeComponentZIndex, resolveLayerInsertIndex } from '@/utils/layer'
 import * as Y from 'yjs'
 
 // ==================== Yjs 镜像助手 ====================
@@ -71,17 +72,6 @@ function syncComponentToYjs(component: ComponentData): void {
             arr.push([ymap])
         }
     })
-}
-
-/** 从 Yjs 按 id 删除一个组件 */
-function syncRemoveToYjs(componentId: string): void {
-    const collab = getCollab()
-    if (!collab) return
-    const arr = collab.collabDoc.yComponents
-    const idx = findYMapIndex(arr, componentId)
-    if (idx >= 0) {
-        applyLocalChange(() => arr.delete(idx, 1))
-    }
 }
 
 export const useStore = defineStore('main', {
@@ -191,38 +181,25 @@ export const useStore = defineStore('main', {
 
         setComponentData(componentData: ComponentData[] = []): void {
             this.componentData = componentData
-            // 兼容旧数据：为没有 zIndex 的组件自动分配（循环进位 +2，避免冲突）
+            // 统一图层策略：数组顺序为准，zIndex 按数组顺序连续镜像
             this.ensureZIndex()
             if (!isApplyingRemote()) syncAllToYjs(this.componentData)
             this.markDataDirty()
         },
 
         addComponent({ component, index }: AddComponentPayload): void {
-            // 自动分配 zIndex = 当前最大值 + 1（保证新组件在最上面）
-            const maxZ = this.componentData.reduce((max, c) => Math.max(max, c.zIndex || 0), 0)
-            component.zIndex = maxZ + 1
-
-            if (index !== undefined) {
-                this.componentData.splice(index, 0, component)
-            } else {
-                this.componentData.push(component)
-            }
-            if (!isApplyingRemote()) syncComponentToYjs(component)
+            const insertIndex = resolveLayerInsertIndex(this.componentData.length, index)
+            this.componentData.splice(insertIndex, 0, component)
+            normalizeComponentZIndex(this.componentData)
+            if (!isApplyingRemote()) syncAllToYjs(this.componentData)
             this.markDataDirty()
         },
 
         /**
-         * 为所有组件分配连续 zIndex（1,2,3...），按数组当前顺序
-         * 用于数据加载后的兼容处理
+         * 按 zIndex 兼容旧数据后，再按数组顺序分配连续 zIndex（1,2,3...）
          */
         ensureZIndex(): void {
-            let hasMissing = false
-            for (const c of this.componentData) {
-                if (!c.zIndex || c.zIndex === 0) { hasMissing = true; break }
-            }
-            if (!hasMissing) return
-            // 按数组顺序重排 zIndex
-            this.componentData.forEach((c, i) => { c.zIndex = (i + 1) * 2 })
+            normalizeComponentLayerOrder(this.componentData)
         },
 
         deleteComponent(index?: number): void {
@@ -238,8 +215,9 @@ export const useStore = defineStore('main', {
             }
 
             if (typeof index === 'number' && index >= 0) {
-                const removed = this.componentData.splice(index, 1)
-                if (!isApplyingRemote() && removed[0]) syncRemoveToYjs(removed[0].id)
+                this.componentData.splice(index, 1)
+                normalizeComponentZIndex(this.componentData)
+                if (!isApplyingRemote()) syncAllToYjs(this.componentData)
                 this.markDataDirty()
             }
         },
@@ -255,62 +233,48 @@ export const useStore = defineStore('main', {
             }
         },
 
-        /**
-         * 上移一层：与 zIndex = current + 1 的组件交换 zIndex 值
-         * 视觉上当前组件向上移动一层
-         */
         upComponent(): void {
             if (!this.curComponent) { ElMessage.warning('请选择组件'); return }
-            const curZ = this.curComponent.zIndex
-            // 找 zIndex 刚好比当前大 1 的组件
-            const above = this.componentData.find(c => c.zIndex === curZ + 1)
-            if (above) {
-                above.zIndex = curZ
-                this.curComponent.zIndex = curZ + 1
-                this.markDataDirty()
-            } else {
-                ElMessage.warning('已经到顶了')
-            }
+            const index = this.componentData.findIndex(c => c.id === this.curComponent!.id)
+            if (index === -1 || index >= this.componentData.length - 1) { ElMessage.warning('已经到顶了'); return }
+            moveArrayItem(this.componentData, index, index + 1)
+            normalizeComponentZIndex(this.componentData)
+            this.curComponentIndex = index + 1
+            if (!isApplyingRemote()) syncAllToYjs(this.componentData)
+            this.markDataDirty()
         },
 
-        /**
-         * 下移一层：与 zIndex = current - 1 的组件交换 zIndex 值
-         */
         downComponent(): void {
             if (!this.curComponent) { ElMessage.warning('请选择组件'); return }
-            const curZ = this.curComponent.zIndex
-            const below = this.componentData.find(c => c.zIndex === curZ - 1)
-            if (below) {
-                below.zIndex = curZ
-                this.curComponent.zIndex = curZ - 1
-                this.markDataDirty()
-            } else {
-                ElMessage.warning('已经到底了')
-            }
+            const index = this.componentData.findIndex(c => c.id === this.curComponent!.id)
+            if (index <= 0) { ElMessage.warning('已经到底了'); return }
+            moveArrayItem(this.componentData, index, index - 1)
+            normalizeComponentZIndex(this.componentData)
+            this.curComponentIndex = index - 1
+            if (!isApplyingRemote()) syncAllToYjs(this.componentData)
+            this.markDataDirty()
         },
 
         topComponent(): void {
-            // 置顶：zIndex = 当前最大值 + 1
             if (!this.curComponent) { ElMessage.warning('请选择组件'); return }
-            const maxZ = this.componentData.reduce((max, c) => Math.max(max, c.zIndex), 0)
-            if (this.curComponent.zIndex < maxZ) {
-                this.curComponent.zIndex = maxZ + 1
-                this.markDataDirty()
-            } else {
-                ElMessage.warning('已经到顶了')
-            }
+            const index = this.componentData.findIndex(c => c.id === this.curComponent!.id)
+            if (index === -1 || index >= this.componentData.length - 1) { ElMessage.warning('已经到顶了'); return }
+            moveArrayItem(this.componentData, index, this.componentData.length - 1)
+            normalizeComponentZIndex(this.componentData)
+            this.curComponentIndex = this.componentData.length - 1
+            if (!isApplyingRemote()) syncAllToYjs(this.componentData)
+            this.markDataDirty()
         },
 
         bottomComponent(): void {
-            // 置底：zIndex = 当前最小值 - 1（最低为 1）
             if (!this.curComponent) { ElMessage.warning('请选择组件'); return }
-            const minZ = this.componentData.reduce((min, c) => Math.min(min, c.zIndex), Infinity)
-            if (this.curComponent.zIndex > minZ) {
-                this.curComponent.zIndex = Math.max(1, minZ - 1)
-                this.markDataDirty()
-            } else {
-                ElMessage.warning('已经到底了')
-            }
+            const index = this.componentData.findIndex(c => c.id === this.curComponent!.id)
+            if (index <= 0) { ElMessage.warning('已经到底了'); return }
+            moveArrayItem(this.componentData, index, 0)
+            normalizeComponentZIndex(this.componentData)
+            this.curComponentIndex = 0
+            if (!isApplyingRemote()) syncAllToYjs(this.componentData)
+            this.markDataDirty()
         },
 
         addAnimation(animation: AnimationItem | { label: string; value: string }): void {

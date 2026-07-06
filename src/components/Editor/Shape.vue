@@ -1,6 +1,4 @@
-    }) as (...args: unknown[]) => void)
-
-    const move<template>
+<template>
     <div
         ref="shapeRef"
         class="shape"

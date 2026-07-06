@@ -18,6 +18,7 @@ import { applyLocalChange } from './useCollabStore'
 import { fromComponentData, findYMapIndex, replaceAllComponents, writeCanvas } from './yDoc'
 import { isApplyingRemote } from './undoOrigin'
 import { getCollab } from './useCollabStore'
+import { moveArrayItem, normalizeComponentZIndex, resolveLayerInsertIndex } from '@/utils/layer'
 import * as Y from 'yjs'
 
 export function createCommandContext(): CommandContext {
@@ -98,19 +99,14 @@ export function createCommandContext(): CommandContext {
                 // 远端推来的变更已在 store,不回写 Yjs
                 return
             }
-            if (index !== undefined && index >= 0 && index <= store.componentData.length) {
-                store.componentData.splice(index, 0, item)
-            } else {
-                store.componentData.push(item)
-            }
-            // 镜像到 Yjs
+            const insertIndex = resolveLayerInsertIndex(store.componentData.length, index)
+            store.componentData.splice(insertIndex, 0, item)
+            normalizeComponentZIndex(store.componentData)
+
             const arr = yComponents()
             if (arr) {
                 applyLocalChange(() => {
-                    const ymap = new Y.Map()
-                    fromComponentData(ymap, item)
-                    const insertIndex = index ?? arr.length
-                    arr.insert(insertIndex, [ymap])
+                    replaceAllComponents(arr, store.componentData)
                 })
             }
             store.markDataDirty()
@@ -127,11 +123,12 @@ export function createCommandContext(): CommandContext {
             if (isApplyingRemote()) return null
             if (index < 0 || index >= store.componentData.length) return null
             const removed = store.componentData.splice(index, 1)[0]
-            // 镜像到 Yjs
+            normalizeComponentZIndex(store.componentData)
+
             const arr = yComponents()
-            if (arr && index < arr.length) {
+            if (arr) {
                 applyLocalChange(() => {
-                    arr.delete(index, 1)
+                    replaceAllComponents(arr, store.componentData)
                 })
             }
             store.markDataDirty()
@@ -142,16 +139,13 @@ export function createCommandContext(): CommandContext {
             if (isApplyingRemote()) return
             if (from < 0 || from >= store.componentData.length) return
             if (to < 0 || to >= store.componentData.length) return
-            const [item] = store.componentData.splice(from, 1)
-            store.componentData.splice(to, 0, item)
-            // 镜像到 Yjs:Y.Array 的 move
+            moveArrayItem(store.componentData, from, to)
+            normalizeComponentZIndex(store.componentData)
+
             const arr = yComponents()
             if (arr) {
                 applyLocalChange(() => {
-                    // Y.Array 没有 move,用 delete + insert
-                    const ymap = arr.get(from)
-                    arr.delete(from, 1)
-                    arr.insert(to, [ymap])
+                    replaceAllComponents(arr, store.componentData)
                 })
             }
             store.markDataDirty()
@@ -162,13 +156,15 @@ export function createCommandContext(): CommandContext {
             if (isApplyingRemote()) {
                 // 远端已写 store,不回写 Yjs
                 store.componentData.splice(0, store.componentData.length, ...list)
+                normalizeComponentZIndex(store.componentData)
                 return backup
             }
             store.componentData.splice(0, store.componentData.length, ...list)
+            normalizeComponentZIndex(store.componentData)
             const arr = yComponents()
             if (arr) {
                 applyLocalChange(() => {
-                    replaceAllComponents(arr, list)
+                    replaceAllComponents(arr, store.componentData)
                 })
             }
             store.markDataDirty()
