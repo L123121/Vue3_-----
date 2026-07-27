@@ -30,7 +30,7 @@ function makeComponent(id: string, top = 0, left = 0): ComponentData {
 }
 
 /**
- * 创建测试用 CommandContext (直接操作 store, 不涉及 Yjs)
+ * 创建测试用 CommandContext (直接操作 store)
  */
 function createTestContext(store: ReturnType<typeof useStore>): CommandContext {
     return {

@@ -53,10 +53,7 @@ export interface CommandEnvelope {
  * 命令应用上下文 - 解耦命令与 Pinia store
  *
  * 命令不再直接 useStore()，而是通过 ctx 操作组件数据。
- * ctx 的实现可以是:
- *   - 直接操作 store.componentData 数组（单机/非协同）
- *   - 操作 Yjs 文档（协同，observe 自动同步回 store）
- *
+ * ctx 的实现是直接操作 store.componentData 数组。
  * 所有原语都会触发 markDataDirty()（由实现负责），用于自动保存脏标记。
  */
 export interface CommandContext {
@@ -90,7 +87,7 @@ export interface CommandContext {
   setCanvas(patch: Partial<CanvasStyleData>): void
   /** 编辑器 DOM（DecomposeCommand 等需要测量画布尺寸） */
   editorEl: HTMLElement | null
-  /** 剪贴板(纯本地状态,不参与协同同步) */
+  /** 剪贴板(纯本地状态) */
   clipboard: CopyData | null
   /** 设置剪贴板 */
   setClipboard(data: CopyData | null): void

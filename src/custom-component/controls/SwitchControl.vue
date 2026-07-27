@@ -4,7 +4,7 @@
         size="small"
         active-text="开启"
         inactive-text="关闭"
-        @update:model-value="$emit('update:modelValue', $event)"
+        @update:model-value="handleUpdate"
     />
 </template>
 
@@ -16,7 +16,11 @@ defineProps<{
   config?: PropConfig
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   'update:modelValue': [value: boolean]
 }>()
+
+function handleUpdate(value: string | number | boolean): void {
+    emit('update:modelValue', Boolean(value))
+}
 </script>

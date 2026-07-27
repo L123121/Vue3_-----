@@ -2,6 +2,7 @@ import { BaseCommand, getContext } from './BaseCommand'
 import { CommandType, type Command, type CommandEnvelope } from './types'
 import { register } from './registry'
 import type { ComponentData, CanvasStyleData } from '@/types'
+import { deepCopy } from '@/utils/utils'
 import { nanoid } from 'nanoid'
 
 interface ImportData {
@@ -25,7 +26,7 @@ export class ImportDataCommand extends BaseCommand {
         super()
         this.id = nanoid()
         this.importData = {
-            newComponentData: newComponentData.map(c => structuredClone(c)),
+            newComponentData: newComponentData.map(c => deepCopy(c)),
             newCanvasStyle: newCanvasStyle ? { ...newCanvasStyle } : undefined,
             backupComponentData: [],
             backupCanvasStyle: null,
@@ -36,10 +37,10 @@ export class ImportDataCommand extends BaseCommand {
     execute(): void {
         const ctx = getContext()
 
-        this.importData.backupComponentData = ctx.getAll().map(c => structuredClone(c))
+        this.importData.backupComponentData = ctx.getAll().map(c => deepCopy(c))
         this.importData.backupCanvasStyle = { ...ctx.getCanvas() }
 
-        ctx.replaceAll(this.importData.newComponentData.map(c => structuredClone(c)))
+        ctx.replaceAll(this.importData.newComponentData.map(c => deepCopy(c)))
         if (this.importData.newCanvasStyle) {
             ctx.setCanvas(this.importData.newCanvasStyle)
         }
@@ -50,7 +51,7 @@ export class ImportDataCommand extends BaseCommand {
 
     undo(): void {
         const ctx = getContext()
-        ctx.replaceAll(this.importData.backupComponentData.map(c => structuredClone(c)))
+        ctx.replaceAll(this.importData.backupComponentData.map(c => deepCopy(c)))
         if (this.importData.backupCanvasStyle) {
             ctx.setCanvas(this.importData.backupCanvasStyle)
         }
@@ -70,9 +71,9 @@ register(CommandType.IMPORT_DATA, (env: CommandEnvelope) => {
     const cmd = new ImportDataCommand(d.newComponentData, d.newCanvasStyle)
     cmd.id = env.id
     ;(cmd as unknown as { importData: ImportData }).importData = {
-        newComponentData: (d.newComponentData ?? []).map(c => structuredClone(c)),
+        newComponentData: (d.newComponentData ?? []).map(c => deepCopy(c)),
         newCanvasStyle: d.newCanvasStyle ? { ...d.newCanvasStyle } : undefined,
-        backupComponentData: (d.backupComponentData ?? []).map(c => structuredClone(c)),
+        backupComponentData: (d.backupComponentData ?? []).map(c => deepCopy(c)),
         backupCanvasStyle: d.backupCanvasStyle ? { ...d.backupCanvasStyle } : null,
     }
     cmd.data = (cmd as unknown as { importData: ImportData }).importData as unknown as Record<string, unknown>

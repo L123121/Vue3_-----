@@ -30,6 +30,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install server dependencies
+        run: npm ci
+        working-directory: server
+
       # ----- 必过门禁 -----
       - name: Lint
         run: npm run lint:check
@@ -37,8 +41,12 @@ jobs:
       - name: Type check
         run: npm run type-check
 
-      - name: Unit tests
-        run: npm run test:run
+      - name: Unit tests and coverage
+        run: npm run test:coverage
+
+      - name: Server tests
+        run: npm test
+        working-directory: server
 
       - name: Build
         run: npm run build
@@ -51,3 +59,25 @@ jobs:
           name: dist
           path: dist/
           retention-days: 7
+
+  e2e:
+    needs: lint-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: End-to-end tests
+        run: npm run test:e2e

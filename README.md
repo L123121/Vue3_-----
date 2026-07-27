@@ -117,8 +117,7 @@
 | **JSON 导入导出** | 一键导出页面 JSON 数据，导入时通过 Zod 运行时校验数据格式 |
 | **HTML 导出** | 将画布导出为自包含独立 HTML 文件（内联样式 + 动画关键帧 + 事件绑定），双击即可在浏览器打开 |
 | **版本管理** | 保存页面历史版本，支持版本恢复和删除，持久化到 localStorage |
-| **协同编辑** | 基于 Yjs CRDT 的多人实时协作，通过 `?collab=1` 启用，支持远程光标、在线用户感知、IndexedDB 持久化 |
-| **用户认证** | 登录/注册/仪表盘页面，基于 token 的路由守卫，REST API 后端服务 |
+| **AI 页面生成** | 多轮卡片决策式 AI Agent，通过布局→风格→配色→内容等多轮卡片交互，实时预览生成页面，用户可随时输入想法覆盖卡片选择 |
 | **命令时间线** | undo 历史可视化（CommandTimeline 组件），命令栈跨会话持久化到 IndexedDB |
 | **XSS 防护** | 使用 DOMPurify 净化富文本内容，HTML 导出时对 URL/CSS 进行安全校验 |
 
@@ -297,7 +296,7 @@ function handleMouseDownOnShape(e: MouseEvent): void {
 | **Vue 3** | ^3.2.47 | 核心框架，使用 Composition API 开发，响应式渲染组件 |
 | **TypeScript** | ^5.7.0 | 类型约束，保障 JSON 数据结构的类型安全与可扩展性 |
 | **Pinia** | ^2.0.32 | 状态管理，管理画布数据、组件状态及命令历史 |
-| **Vue Router** | ^4.1.6 | 路由管理，支持多页面编辑切换与鉴权守卫 |
+| **Vue Router** | ^4.1.6 | 路由管理，支持编辑器与预览页切换 |
 | **Element Plus** | ^2.3.0 | UI 组件库，用于属性面板和侧边栏（全局 size: 'small'） |
 | **Vite** | ^6.1.0 | 构建工具，极速的热更新体验 |
 | **Zod** | ^4.3.6 | 运行时数据校验，校验导入的 JSON 数据结构 |
@@ -306,11 +305,8 @@ function handleMouseDownOnShape(e: MouseEvent): void {
 | **Ace Editor** | ^1.12.3（ace-builds） | 代码编辑器，用于 JSON 数据编辑 |
 | **html-to-image** | ^1.9.0 | 页面截图导出 |
 | **nanoid** | ^4.0.0 | 唯一 ID 生成，组件 ID 与版本 ID 均由 nanoid 生成 |
-| **axios** | ^1.18.1 | HTTP 请求库，用于用户认证与服务端 API 交互 |
+| **axios** | ^1.18.1 | HTTP 请求库，用于 AI 生成 API 交互 |
 | **DOMPurify** | ^3.4.11 | XSS 防护，净化富文本内容与 HTML 导出输出 |
-| **Yjs** | ^13.6.31 | 协同编辑 CRDT 框架，支持多人实时协作（通过 `?collab=1` 启用） |
-| **y-websocket** | ^3.0.0 | Yjs WebSocket 通信层，连接协同服务器 |
-| **y-indexeddb** | ^9.0.12 | Yjs IndexedDB 持久化，协同数据本地缓存 |
 | **Vitest** | ^3.1.0 | 单元测试框架，测试文件位于各模块 `__tests__/` 目录 |
 
 ---
@@ -356,21 +352,19 @@ cd visual-drag-demo
 
 # 安装依赖
 npm install
+npm --prefix server install
 
 # 准备前端环境变量
 cp .env.example .env.local
 
-# 准备后端环境变量（JWT_SECRET 请替换为足够长的随机字符串）
+# 准备后端环境变量（AI_API_KEY 必填，用于 AI 页面生成）
 cp server/.env.example server/.env
 
 # 启动开发服务器（端口 8080）
 npm run dev
 
-# 启动完整后端服务：REST API + 协同 WebSocket（端口 3000）
+# 启动后端服务：REST API + AI 生成（端口 3000）
 npm run api
-
-# 仅启动旧版协同 WebSocket 服务（可选，端口 1234）
-npm run server
 
 # 生产构建
 npm run build
@@ -383,18 +377,39 @@ npm run lint
 
 # 单元测试
 npm run test:run
+
+# 服务端测试
+npm --prefix server test
+
+# 浏览器端到端测试
+npm run test:e2e
 ```
 
-访问 `http://localhost:8080` 即可开始编辑。在 URL 后加 `?collab=1` 可启用协同编辑模式。
+访问 `http://localhost:8080` 即可开始编辑。点击工具栏"AI 生成"打开 AI Agent 面板，通过多轮卡片决策生成页面（需先启动后端并配置 `AI_API_KEY`）。
 
 环境变量说明：
 
 | 文件 | 变量 | 说明 |
 | --- | --- | --- |
-| `.env.local` | `VITE_API_BASE` | 前端访问 REST API 的基础地址，默认 `http://localhost:3000` |
-| `.env.local` | `VITE_WS_URL` | Yjs WebSocket 地址；`npm run server` 用 `ws://localhost:1234`，`npm run api` 用 `ws://localhost:3000/ws` |
-| `server/.env` | `JWT_SECRET` | JWT 签名密钥，生产环境必须配置，不能提交真实密钥 |
+| `.env.local` | `VITE_API_BASE_URL` | 生产环境 API 完整地址；开发环境留空并使用 Vite 代理 |
+| `.env.local` | `VITE_DEV_API_PROXY_TARGET` | 开发代理目标，默认 `http://localhost:3000` |
+| `.env.local` | `VITE_API_ACCESS_KEY` | 可选 API 访问密钥，仅适合受控内网部署 |
+| `server/.env` | `AI_API_KEY` | LLM 服务密钥，AI 页面生成必填 |
+| `server/.env` | `AI_BASE_URL` | LLM 服务地址（可选，默认 stepfun） |
+| `server/.env` | `AI_MODEL` | 模型名（可选，默认 step-3.7-flash） |
 | `server/.env` | `CORS_ORIGIN` | 允许访问后端的前端域名，多个域名用逗号分隔 |
+| `server/.env` | `API_ACCESS_KEYS` | 可选 API Key 列表；生产环境配合 `REQUIRE_API_AUTH=true` |
+| `server/.env` | `REDIS_URL` | 可选 Redis 地址，用于跨实例保存 Agent 会话 |
+| `server/.env` | `AGENT_MAX_STEPS` | Agent 单轮最大模型决策次数，默认 12 |
+
+主画布以版本化 `ProjectDocument` 保存到 IndexedDB，启动时会自动迁移旧版 `canvasData` / `canvasStyle` localStorage 数据。版本历史功能仍独立保存在 localStorage。
+
+### 生产部署
+
+- 前端可部署到 Vercel 等静态托管平台。
+- Express API 需要部署到独立 Node.js 服务，并在前端构建环境配置 `VITE_API_BASE_URL`。
+- 生产环境建议启用 `REQUIRE_API_AUTH=true`、配置 `API_ACCESS_KEYS`、严格设置 `CORS_ORIGIN`，并使用 Redis 保存 Agent 会话。
+- 浏览器内的 `VITE_API_ACCESS_KEY` 不能替代正式用户认证；公网产品应接入真实登录体系或 API 网关。
 
 ---
 
@@ -402,14 +417,6 @@ npm run test:run
 
 ```text
 src/
-├── collab/                  # 协同编辑（Yjs CRDT，通过 ?collab=1 启用）
-│   ├── awareness.ts         # 用户在线状态与光标感知
-│   ├── commandContext.ts     # 协同模式下的命令上下文注入
-│   ├── index.ts             # 协同模块入口
-│   ├── provider.ts          # WebSocket Provider 封装
-│   ├── undoOrigin.ts        # Yjs UndoManager 集成
-│   ├── useCollabStore.ts    # 协同初始化 Hook（initCollab）
-│   └── yDoc.ts              # Yjs 文档与数据镜像
 ├── components/              # 编辑器核心 UI
 │   ├── Editor/              # 画布渲染引擎
 │   │   ├── index.vue        # 编辑器主入口
@@ -422,8 +429,14 @@ src/
 │   │   ├── AceEditor.vue    # JSON 编辑器
 │   │   ├── ComponentWrapper.vue  # 组件包装器
 │   │   ├── NodeRenderer.vue      # 递归组件渲染器（parentId 嵌套）
-│   │   ├── PreviewNodeRenderer.vue # 预览模式递归渲染器
-│   │   └── RemoteCursors.vue     # 协同远程光标渲染
+│   │   └── PreviewNodeRenderer.vue # 预览模式递归渲染器
+│   ├── AIPanel.vue          # AI Agent 面板（多轮卡片决策）
+│   ├── agent/                # Agent 子组件
+│   │   ├── ProgressBar.vue   # 进度条
+│   │   ├── CardGrid.vue      # 卡片网格
+│   │   ├── AgentMessage.vue  # 消息气泡
+│   │   ├── InputBar.vue      # 输入框
+│   │   └── PreviewNode.vue   # 预览节点渲染
 │   ├── Toolbar.vue          # 顶部工具栏
 │   ├── ComponentList.vue    # 左侧组件列表
 │   ├── RealTimeComponentList.vue # 图层列表
@@ -433,7 +446,6 @@ src/
 │   ├── EventList.vue        # 事件列表
 │   ├── VersionHistory.vue   # 版本历史
 │   ├── CommandTimeline.vue  # 命令时间线（undo 历史可视化）
-│   ├── OnlineUsers.vue      # 协同在线用户列表
 │   └── Modal.vue            # 通用弹窗
 ├── custom-component/        # 低代码组件实现
 │   ├── VText/               # 文本组件
@@ -468,6 +480,9 @@ src/
 │   ├── component-list.ts    # 组件模板列表
 │   ├── registry.ts          # 组件注册表（registerComponent API）
 │   └── index.ts             # 组件注册入口
+├── api/                     # API 服务
+│   ├── ai.ts                # AI 页面生成 API（旧版单轮）
+│   └── agent.ts             # AI Agent 多轮决策 API
 ├── composables/             # Composable 函数
 │   ├── useAutoSave.ts       # 自动保存（脏标记 + 防抖）
 │   ├── useCommandActions.ts # 命令操作（撤销/重做/命令执行）
@@ -477,8 +492,7 @@ src/
 │   ├── usePanelToggle.ts    # 面板切换状态
 │   └── useEditorContext.ts  # 编辑器上下文（provide/inject）
 ├── store/                   # 状态管理
-│   ├── index.ts             # 主 Pinia Store（画布数据 + Yjs 镜像）
-│   └── auth.ts              # 用户认证 Store（token/user/login/register/logout）
+│   └── index.ts             # 主 Pinia Store（画布数据、命令历史、版本等）
 ├── types/                   # TypeScript 类型定义
 │   └── index.ts             # 核心类型定义（无 enum，全用联合类型）
 ├── schemas/                 # Zod Schema 定义
@@ -507,7 +521,7 @@ src/
 │   └── __tests__/           # 命令测试（4 个测试文件）
 ├── utils/                   # 工具函数
 │   ├── utils.ts             # 通用工具（deepCopy、swap、$、isPreventDrop）
-│   ├── eventBus.ts          # 类型安全事件总线（EventMap 泛型，含协同事件）
+│   ├── eventBus.ts          # 类型安全事件总线（EventMap 泛型）
 │   ├── generateID.ts        # ID 生成器（nanoid）
 │   ├── style.ts             # 样式计算
 │   ├── translate.ts         # 坐标转换（旋转矩阵、缩放比例）
@@ -534,19 +548,22 @@ src/
 │   └── reset.css            # 样式重置
 ├── views/                   # 页面入口
 │   ├── Home.vue             # 编辑器主页面
-│   ├── PreviewPage.vue      # iframe 预览独立页面（/preview 路由）
-│   ├── Login.vue            # 登录页（/login，guest 守卫）
-│   ├── Register.vue         # 注册页（/register，guest 守卫）
-│   └── Dashboard.vue        # 仪表盘页（/dashboard，requiresAuth）
+│   └── PreviewPage.vue      # iframe 预览独立页面（/preview 路由）
 ├── router/                  # 路由配置
-│   └── index.ts             # 6 条路由 + beforeEach 鉴权守卫
+│   └── index.ts             # 2 条路由（/ 编辑器，/preview 预览）
 ├── App.vue                  # 根组件
-├── main.ts                  # 入口文件（挂载插件 + 命令注册 + 协同初始化）
+├── main.ts                  # 入口文件（挂载插件 + 命令注册 + 上下文初始化）
 └── env.d.ts                 # 环境类型声明
 
-server/                      # 后端服务（Node.js + ws）
-├── index.js                 # WebSocket 协同服务器
-└── app.js                   # REST API 服务（用户认证）
+server/                      # 后端服务（Express REST API）
+├── app.js                   # AI 服务入口
+├── sessionStore.js          # Agent Session 存储
+├── agentHelper.js           # Agent 辅助函数（系统提示词/输出解析）
+├── routes/
+│   ├── ai.js                # AI 生成路由（POST /api/ai/chat，旧版）
+│   └── agent.js             # AI Agent 路由（POST /api/ai/agent/round）
+└── utils/
+    └── nanoid.js            # 服务端 ID 生成
 ```
 
 ---

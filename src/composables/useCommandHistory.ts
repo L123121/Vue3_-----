@@ -5,8 +5,7 @@
  * 序列化(commandManager.exportStack())写入 IndexedDB。
  * 应用启动时从 IndexedDB 恢复栈(importCommandStack),刷新后仍可 Ctrl+Z。
  *
- * 注意:命令栈是"本地操作历史",不参与协同同步(各端各有自己的栈)。
- * 与 y-indexeddb(持久化的是文档状态)正交。
+ * 注意:命令栈是"本地操作历史"。
  */
 
 import { watch, onUnmounted } from 'vue'
@@ -15,7 +14,7 @@ import { useStore } from '@/store'
 import type { CommandEnvelope } from '@/commands/types'
 import { exportCommandStack, importCommandStack } from '@/composables/useCommandActions'
 
-const DB_NAME = 'lowcode-collab'
+const DB_NAME = 'lowcode-command-history'
 const STORE_NAME = 'command-history'
 const KEY = 'undoStack'
 const DEBOUNCE_MS = 800
@@ -102,7 +101,7 @@ export function useCommandHistory(): void {
 
 /**
  * 应用启动时调用:从 IndexedDB 恢复命令栈。
- * 应在协同初始化之后、用户操作之前调用。
+ * 应在应用初始化后、用户操作之前调用。
  */
 export async function restoreCommandHistory(): Promise<void> {
     try {

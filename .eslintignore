@@ -3,5 +3,5 @@ iconfont/
 # 不属于 src 应用代码，不纳入 ESLint 检查范围
 scripts/
 public/
-# server/ 是 Yjs 协同的 Node ESM 服务端，独立运行，不走前端 eslint 规则
+# server/ 是独立的 Node ESM 服务端，不走前端 eslint 规则
 server/

@@ -52,7 +52,7 @@
                     <el-button :icon="View" size="small" @click="preview(false)">
                         预览
                     </el-button>
-                    <el-button :icon="FolderChecked" size="small" @click="saveToServer">
+                    <el-button :icon="FolderChecked" size="small" @click="save">
                         保存
                     </el-button>
                     <el-button :icon="Delete" size="small" @click="clearCanvas">
@@ -109,13 +109,33 @@
                 </div>
             </div>
 
-            <!-- 右侧：画布配置 + 主题 -->
+            <!-- 右侧：AI + 画布配置 + 主题 -->
             <div class="toolbar-right">
+                <!-- AI 生成 -->
+                <el-button
+                    type="primary"
+                    :icon="MagicStick"
+                    size="small"
+                    @click="toggleAIPanel"
+                >
+                    AI 生成
+                </el-button>
+                <el-divider direction="vertical" />
                 <div class="canvas-config">
                     <label>画布</label>
-                    <input v-model="canvasStyleData.width" class="canvas-input">
+                    <input
+                        v-model.number="canvasStyleData.width"
+                        type="number"
+                        class="canvas-input"
+                        @change="handleCanvasSizeChange"
+                    >
                     <span class="separator">×</span>
-                    <input v-model="canvasStyleData.height" class="canvas-input">
+                    <input
+                        v-model.number="canvasStyleData.height"
+                        type="number"
+                        class="canvas-input"
+                        @change="handleCanvasSizeChange"
+                    >
                 </div>
                 <div class="canvas-config">
                     <label>比例</label>
@@ -130,26 +150,6 @@
                     inline-prompt
                     @change="handleToggleDarkMode"
                 />
-                <template v-if="collabEnabled">
-                    <el-divider direction="vertical" />
-                    <el-tooltip :content="getCollabStatusText()" placement="bottom">
-                        <el-tag
-                            :type="getCollabTagType()"
-                            size="small"
-                            class="collab-status-tag"
-                        >
-                            {{ collabStatus === 'connected' ? '🟢' : collabStatus === 'connecting' ? '🟡' : '🔴' }}
-                            协同
-                        </el-tag>
-                    </el-tooltip>
-                    <OnlineUsers />
-                </template>
-                <template v-else>
-                    <el-divider direction="vertical" />
-                    <el-button :icon="Connection" size="small" @click="toggleCollab">
-                        协同编辑
-                    </el-button>
-                </template>
             </div>
         </div>
 
@@ -201,18 +201,17 @@
                 </div>
             </template>
         </el-dialog>
+
+        <!-- AI 生成面板 -->
+        <AIPanel v-if="hasOpenedAIPanel" v-model="showAIPanel" />
     </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { defineAsyncComponent, ref, onMounted, onUnmounted } from 'vue'
 import { useStore } from '@/store'
 import { storeToRefs } from 'pinia'
 import generateID from '@/utils/generateID'
-import Preview from '@/components/Editor/Preview.vue'
-import AceEditor from '@/components/Editor/AceEditor.vue'
-import VersionHistory from '@/components/VersionHistory.vue'
 import { commonStyle, commonAttr } from '@/custom-component/component-list'
 import eventBus from '@/utils/eventBus'
 import { $ } from '@/utils/utils'
@@ -221,13 +220,12 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import {
     Sunny, Moon, Edit, Upload, Download, RefreshLeft, RefreshRight,
     Picture, View, FolderChecked, Delete, Camera, Connection,
-    Remove, Lock, Unlock, Clock, Document,
+    Remove, Lock, Unlock, Clock, Document, MagicStick,
 } from '@element-plus/icons-vue'
 import type { ComponentData, CanvasStyleData, ComponentStyle } from '@/types'
 import { validateAuto } from '@/utils/validation'
 import { exportToHtml, downloadHtmlFile } from '@/utils/exportHtml'
-import OnlineUsers from '@/components/OnlineUsers.vue'
-import { getCollab, initCollab } from '@/collab/useCollabStore'
+import { PROJECT_DOCUMENT_VERSION, saveProjectDocument } from '@/storage/projectStorage'
 import {
     undo as undoAction,
     redo as redoAction,
@@ -246,63 +244,20 @@ interface ExportData {
 }
 
 const store = useStore()
-const route = useRoute()
 const { componentData, canvasStyleData, areaData, curComponent, isDarkMode } = storeToRefs(store)
 
-// 协同编辑状态(响应式)
-const collabEnabled = ref(!!getCollab())
-const collabStatus = ref<'connecting' | 'connected' | 'disconnected'>(
-    getCollab()?.status.value ?? 'disconnected',
-)
-let collabStatusTimer: number | null = null
+// AI 面板
+const showAIPanel = ref(false)
+const hasOpenedAIPanel = ref(false)
 
-function getCollabStatusText(): string {
-    if (collabStatus.value === 'connected') return '协同已连接'
-    if (collabStatus.value === 'connecting') return '正在连接...'
-    return '协同已断开'
-}
+const Preview = defineAsyncComponent(() => import('@/components/Editor/Preview.vue'))
+const AceEditor = defineAsyncComponent(() => import('@/components/Editor/AceEditor.vue'))
+const VersionHistory = defineAsyncComponent(() => import('@/components/VersionHistory.vue'))
+const AIPanel = defineAsyncComponent(() => import('@/components/AIPanel.vue'))
 
-function getCollabTagType(): 'success' | 'warning' | 'danger' {
-    if (collabStatus.value === 'connected') return 'success'
-    if (collabStatus.value === 'connecting') return 'warning'
-    return 'danger'
-}
-
-onUnmounted(() => {
-    if (collabStatusTimer !== null) {
-        window.clearInterval(collabStatusTimer)
-    }
-})
-
-function toggleCollab(): void {
-    if (collabEnabled.value) return
-    // 初始化协同
-    store.initCommandContext()
-    const collab = initCollab()
-    collabEnabled.value = true
-    collabStatus.value = collab.status.value
-    // 监听状态变化
-    const checkStatus = setInterval(() => {
-        const c = getCollab()
-        if (c) {
-            collabStatus.value = c.status.value
-            if (c.status.value === 'connected') clearInterval(checkStatus)
-        }
-    }, 500)
-    ElMessage.success('协同编辑已开启')
-}
-
-// 如果已通过 URL 参数启用了协同,同步状态
-if (collabEnabled.value) {
-    const collab = getCollab()
-    if (collab) {
-        collabStatus.value = collab.status.value
-        // 监听状态变化
-        collabStatusTimer = window.setInterval(() => {
-            const c = getCollab()
-            if (c) collabStatus.value = c.status.value
-        }, 1000)
-    }
+function toggleAIPanel(): void {
+    hasOpenedAIPanel.value = true
+    showAIPanel.value = !showAIPanel.value
 }
 
 const isShowPreview = ref(false)
@@ -316,7 +271,7 @@ const jsonData = ref('')
 const isExport = ref(false)
 const isShowVersionHistory = ref(false)
 
-const DATA_VERSION = '1.0.0'
+const DATA_VERSION = PROJECT_DOCUMENT_VERSION
 
 onMounted(() => {
     eventBus.on('preview', preview)
@@ -340,9 +295,42 @@ onUnmounted(() => {
     eventBus.off('clearCanvas', clearCanvas)
 })
 
-function handleToggleDarkMode(value: boolean): void {
-    store.toggleDarkMode(value)
-    switchValue.value = value
+function handleToggleDarkMode(value: string | number | boolean): void {
+    const enabled = Boolean(value)
+    store.toggleDarkMode(enabled)
+    switchValue.value = enabled
+}
+
+// 画布尺寸变化 → 组件等比缩放
+const lastCanvasSize = ref({ width: canvasStyleData.value.width, height: canvasStyleData.value.height })
+
+function handleCanvasSizeChange(): void {
+    const newW = canvasStyleData.value.width
+    const newH = canvasStyleData.value.height
+    const oldW = lastCanvasSize.value.width
+    const oldH = lastCanvasSize.value.height
+
+    if (!newW || !newH || newW <= 0 || newH <= 0) return
+    if (newW === oldW && newH === oldH) return
+
+    const ratioX = newW / oldW
+    const ratioY = newH / oldH
+
+    const scaleAttrs = ['top', 'left', 'width', 'height', 'fontSize', 'padding'] as const
+    store.componentData.forEach(comp => {
+        scaleAttrs.forEach(key => {
+            const val = comp.style[key]
+            if (typeof val !== 'number' || val === 0) return
+            if (key === 'top' || key === 'height' || key === 'padding') {
+                comp.style[key] = Math.round(val * ratioY)
+            } else {
+                comp.style[key] = Math.round(val * ratioX)
+            }
+        })
+    })
+
+    store.markDataDirty()
+    lastCanvasSize.value = { width: newW, height: newH }
 }
 
 function handleScaleChange(): void {
@@ -412,37 +400,16 @@ function preview(screenshot: boolean): void {
     store.setEditMode('preview')
 }
 
-function save(): void {
+async function save(): Promise<void> {
     try {
-        // 保存到 localStorage(本地回退)
-        localStorage.setItem('canvasData', JSON.stringify(componentData.value))
-        localStorage.setItem('canvasStyle', JSON.stringify(canvasStyleData.value))
+        await saveProjectDocument({
+            componentData: componentData.value,
+            canvasStyle: canvasStyleData.value,
+        })
         ElMessage.success('保存成功')
     } catch (e) {
         ElMessage.error('保存失败，请检查浏览器存储空间')
         console.error('保存失败:', e)
-    }
-}
-
-// 保存到服务器(editor/:id 模式)
-async function saveToServer(): Promise<void> {
-    const pageId = route.params.id as string
-    if (!pageId) {
-        save()
-        return
-    }
-    try {
-        const { pagesApi } = await import('@/utils/api')
-        await pagesApi.update(pageId, {
-            componentData: componentData.value,
-            canvasStyle: canvasStyleData.value,
-        })
-        ElMessage.success('已保存到服务器')
-    } catch (e: unknown) {
-        const message = e instanceof Error ? e.message : '未知错误'
-        ElMessage.error('保存到服务器失败: ' + message)
-        // 回退到本地保存
-        save()
     }
 }
 
@@ -654,16 +621,6 @@ function showVersionHistory(): void { isShowVersionHistory.value = true }
     .upload-label {
         display: inline-flex;
         cursor: pointer;
-    }
-
-    .collab-status-tag {
-        cursor: default;
-        user-select: none;
-        font-size: 12px;
-        padding: 0 8px;
-        height: 24px;
-        line-height: 24px;
-        border: none;
     }
 
     .canvas-config {

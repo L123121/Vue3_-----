@@ -19,11 +19,6 @@ export interface EventMap {
   unmove: []
   'v-click': [id: string]
   'v-hover': [id: string]
-  // 协同事件(由 awareness 驱动,供需要响应他人状态的组件订阅)
-  remoteCursorMove: [userId: number, x: number, y: number]
-  remoteCursorLeave: [userId: number]
-  remoteSelection: [userId: number, componentIds: string[]]
-  collabUsersChange: []
 }
 
 type EventName = keyof EventMap

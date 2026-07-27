@@ -14,8 +14,8 @@
 import { useStore } from '@/store'
 import type { Command } from '@/commands/types'
 import { CommandManager } from '@/commands/CommandManager'
-import { setCommandContext } from '@/commands/BaseCommand'
-import { createCommandContext } from '@/collab/commandContext'
+import { setCommandContext, getContext } from '@/commands/BaseCommand'
+import { createLocalCommandContext } from '@/commands/localContext'
 import type { ComponentData, ComponentStyle, CanvasStyleData } from '@/types'
 import eventBus from '@/utils/eventBus'
 import {
@@ -39,11 +39,11 @@ import type { CommandEnvelope } from '@/commands/types'
 const commandManager = new CommandManager({ mergeTimeWindow: 300 })
 
 /**
- * 注入命令上下文(协同初始化时调用)。
- * 命令经 ctx 操作组件数据,ctx 内部镜像到 Yjs。
+ * 注入命令上下文(本地实现,不涉及 Yjs)。
+ * 命令经 ctx 直接操作 Pinia store 的 componentData 数组。
  */
 export function initCommandContext(): void {
-    setCommandContext(createCommandContext())
+    setCommandContext(createLocalCommandContext())
 }
 
 /**
@@ -320,7 +320,9 @@ export function decomposeWithCommand(): void {
 
 export function clearCanvasWithCommand(): void {
     const store = useStore()
-    commandManager.execute(new ClearCanvasCommand())
+    store.componentData.splice(0, store.componentData.length)
+    store.curComponent = null
+    store.curComponentIndex = null
     store.markDataDirty()
 }
 

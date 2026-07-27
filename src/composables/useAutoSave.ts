@@ -1,7 +1,7 @@
 import { watch, onUnmounted } from 'vue'
 import { useStore } from '@/store'
 import { storeToRefs } from 'pinia'
-import { getCollab } from '@/collab/useCollabStore'
+import { saveProjectDocument } from '@/storage/projectStorage'
 
 /**
  * 自动保存 composable
@@ -17,51 +17,78 @@ export function useAutoSave(): void {
 
     let autosaveTimer: ReturnType<typeof setInterval> | null = null
     let saveTimeout: ReturnType<typeof setTimeout> | null = null
-    let lastSavedVersion = 0
+    let dirty = false
+    let saving: Promise<void> | null = null
 
     // 浅监听 dataVersion —— 不会因 drag 期间 style 属性变化而触发
     watch(dataVersion, () => {
-        scheduleAutosave()
+        markDirty()
     })
 
     // 画布配置变化频率低，保留 deep watch
     watch(canvasStyleData, () => {
-        scheduleAutosave()
+        markDirty()
     }, { deep: true })
+
+    function markDirty(): void {
+        dirty = true
+        scheduleAutosave()
+    }
 
     function scheduleAutosave(): void {
         if (saveTimeout) clearTimeout(saveTimeout)
-        saveTimeout = setTimeout(() => saveToStorage(), 3000)
+        saveTimeout = setTimeout(() => { void saveToStorage() }, 3000)
     }
 
-    function saveToStorage(): void {
-        if (dataVersion.value === lastSavedVersion) return
-        // 协同启用时,文档由 y-indexeddb 持久化(更可靠、容量大),跳过 localStorage 写入避免双写冗余
-        if (getCollab()) {
-            lastSavedVersion = dataVersion.value
-            return
-        }
+    async function saveToStorage(force = false): Promise<void> {
+        if ((!dirty && !force) || saving) return saving || Promise.resolve()
+
+        const savedVersion = dataVersion.value
+        const savedCanvasStyle = JSON.stringify(canvasStyleData.value)
+        dirty = false
+        saving = saveProjectDocument({
+            componentData: componentData.value,
+            canvasStyle: canvasStyleData.value,
+        }).then(() => {
+            const changedWhileSaving = dataVersion.value !== savedVersion
+                || JSON.stringify(canvasStyleData.value) !== savedCanvasStyle
+            if (changedWhileSaving) {
+                dirty = true
+                scheduleAutosave()
+            }
+        }).catch((error) => {
+            dirty = true
+            console.error('自动保存失败:', error)
+        }).finally(() => {
+            saving = null
+        })
+
         try {
-            localStorage.setItem('canvasData', JSON.stringify(componentData.value))
-            localStorage.setItem('canvasStyle', JSON.stringify(canvasStyleData.value))
-            lastSavedVersion = dataVersion.value
-        } catch (e) {
-            console.error('自动保存失败:', e)
+            await saving
+        } finally {
+            saving = null
         }
     }
 
-    function handleBeforeUnload(): void {
-        saveToStorage()
+    function handlePageHide(): void {
+        void saveToStorage(true)
+    }
+
+    function handleVisibilityChange(): void {
+        if (document.visibilityState === 'hidden') handlePageHide()
     }
 
     // 初始化
-    window.addEventListener('beforeunload', handleBeforeUnload)
-    autosaveTimer = setInterval(saveToStorage, 60000)
+    window.addEventListener('pagehide', handlePageHide)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    autosaveTimer = setInterval(() => { void saveToStorage() }, 60000)
 
     // 清理
     onUnmounted(() => {
         if (autosaveTimer) clearInterval(autosaveTimer)
-        window.removeEventListener('beforeunload', handleBeforeUnload)
+        window.removeEventListener('pagehide', handlePageHide)
+        document.removeEventListener('visibilitychange', handleVisibilityChange)
         if (saveTimeout) clearTimeout(saveTimeout)
+        void saveToStorage(true)
     })
 }

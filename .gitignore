@@ -1,6 +1,13 @@
 .DS_Store
 node_modules
 /dist
+.logs/
+server/*.log
+playwright-report/
+test-results/
+coverage/
+.claude/settings.local.json
+public/test-error.html
 
 
 # local env files

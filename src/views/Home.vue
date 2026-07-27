@@ -79,7 +79,7 @@
                             </template>
                             <EventList />
                         </el-tab-pane>
-                        <el-tab-pane v-if="collabEnabled" name="history">
+                        <el-tab-pane name="history">
                             <template #label>
                                 <span class="tab-label">
                                     <el-icon><Clock /></el-icon>
@@ -105,7 +105,6 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
-import { useRoute } from 'vue-router'
 import { useStore } from '@/store'
 import { storeToRefs } from 'pinia'
 import Editor from '@/components/Editor/index.vue'
@@ -120,95 +119,96 @@ import CanvasAttr from '@/components/CanvasAttr.vue'
 import PropPanelRenderer from '@/custom-component/PropPanelRenderer.vue'
 import { ArrowLeft, ArrowRight, Box, Operation, CollectionTag, Film, Pointer, Clock } from '@element-plus/icons-vue'
 import { useAutoSave } from '@/composables/useAutoSave'
-import { useCommandHistory, restoreCommandHistory } from '@/composables/useCommandHistory'
+import { useCommandHistory } from '@/composables/useCommandHistory'
 import { useDragDrop } from '@/composables/useDragDrop'
 import { usePanelToggle } from '@/composables/usePanelToggle'
 import { validateComponentData, validateCanvasStyle } from '@/utils/validation'
-import { getCollab } from '@/collab/useCollabStore'
+import type { ComponentData } from '@/types'
+import { loadProjectDocument } from '@/storage/projectStorage'
+
+// 修复 LLM 生成的类型错误（borderRadius 应为字符串，fontWeight 应为数字）
+function fixComponentStyles(c: any): any {
+    if (!c || !c.style) return c
+    const s = { ...c.style }
+    // borderRadius: number → string
+    if (typeof s.borderRadius === 'number') s.borderRadius = String(s.borderRadius)
+    // fontWeight: string → number
+    if (typeof s.fontWeight === 'string') {
+        if (s.fontWeight === 'bold') s.fontWeight = 700
+        else if (s.fontWeight === 'normal') s.fontWeight = 400
+        else {
+            const n = Number(s.fontWeight)
+            s.fontWeight = isNaN(n) ? 400 : n
+        }
+    }
+    return { ...c, style: s }
+}
+
+function fixComponentTypes(c: any): ComponentData | null {
+    if (!c || typeof c !== 'object') return null
+    const fixed = fixComponentStyles(c)
+    // 确保必要字段存在
+    return {
+        id: fixed.id || `fixed_${Math.random().toString(36).slice(2, 10)}`,
+        component: fixed.component || 'VText',
+        label: fixed.label || '组件',
+        icon: fixed.icon || '',
+        propValue: fixed.propValue ?? '',
+        style: fixed.style || {},
+        parentId: null,
+        slot: 'default',
+        zIndex: fixed.zIndex ?? 1,
+        animations: [],
+        events: {},
+        groupStyle: {},
+        isLock: false,
+        collapseName: 'style',
+        linkage: { duration: 0, data: [] },
+    } as ComponentData
+}
 
 const store = useStore()
-const route = useRoute()
 const { curComponent, isClickComponent, rightList, isDarkMode } = storeToRefs(store)
-
-// 协同是否启用(决定是否显示"历史"tab 等协同 UI)
-const collabEnabled = !!getCollab()
 
 const activeName = ref('attr')
 const leftActiveName = ref('components')
 
 // Composables
 useAutoSave()
-// 命令历史持久化(跨会话恢复),仅协同启用时启用持久化监听
-if (collabEnabled) {
-    useCommandHistory()
-}
+useCommandHistory()
 const { handleDrop, handleDragOver } = useDragDrop()
 const { leftList, isShowLeft, isShowRight } = usePanelToggle()
 
 // ==================== 初始化 ====================
-// 从服务器加载页面(editor/:id 模式)
-async function loadFromServer(pageId: string): Promise<void> {
-    try {
-        const { pagesApi } = await import('@/utils/api')
-        const res = await pagesApi.get(pageId)
-        if (res.page.componentData?.length > 0) {
-            store.setComponentData(res.page.componentData)
-        }
-        if (res.page.canvasStyle) {
-            store.setCanvasStyle(res.page.canvasStyle)
-        }
-    } catch (e) {
-        console.error('加载服务器页面失败:', e)
-    }
-}
+async function restore(): Promise<void> {
+    const project = await loadProjectDocument()
+    if (!project) return
 
-function restore(): void {
-    const canvasData = localStorage.getItem('canvasData')
-    if (canvasData) {
-        try {
-            const parsed = JSON.parse(canvasData)
-            const result = validateComponentData(parsed)
-            if (result.success && result.data && result.data.length > 0) {
-                store.setComponentData(result.data)
-            } else {
-                console.warn('画布数据校验失败，已忽略:', result.errors)
-            }
-        } catch (e) {
-            console.error('数据解析失败:', e)
+    const componentResult = validateComponentData(project.componentData)
+    if (componentResult.success && componentResult.data) {
+        store.setComponentData(componentResult.data)
+    } else if (Array.isArray(project.componentData)) {
+        const fixed = project.componentData
+            .map(fixComponentTypes)
+            .filter((component): component is ComponentData => component !== null)
+        if (fixed.length > 0) {
+            console.warn('画布数据已自动修复', fixed.length, '个组件')
+            store.setComponentData(fixed)
         }
     }
 
-    const canvasStyle = localStorage.getItem('canvasStyle')
-    if (canvasStyle) {
-        try {
-            const parsed = JSON.parse(canvasStyle)
-            const result = validateCanvasStyle(parsed)
-            if (result.success && result.data) {
-                store.setCanvasStyle(result.data)
-            } else {
-                console.warn('画布样式校验失败，已忽略:', result.errors)
-            }
-        } catch (e) {
-            console.error('画布样式解析失败:', e)
-        }
+    const canvasResult = validateCanvasStyle(project.canvasStyle)
+    if (canvasResult.success && canvasResult.data) {
+        store.setCanvasStyle(canvasResult.data)
+    } else {
+        console.warn('画布样式校验失败，已忽略:', canvasResult.errors)
     }
 }
 
 onMounted(async () => {
-    // 优先从服务器加载(editor/:id 模式)
-    const pageId = route.params.id as string
-    if (pageId) {
-        await loadFromServer(pageId)
-    } else {
-        restore()
-    }
+    await restore()
     const cleanup = listenGlobalKeyDown()
     onUnmounted(() => { cleanup() })
-
-    // 协同启用时:从 IndexedDB 恢复命令栈(跨会话撤销)
-    if (collabEnabled) {
-        void restoreCommandHistory()
-    }
 
     const savedMode = localStorage.getItem('isDarkMode')
     if (savedMode !== null) {

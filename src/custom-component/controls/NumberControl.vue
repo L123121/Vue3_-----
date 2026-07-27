@@ -7,7 +7,7 @@
         size="small"
         controls-position="right"
         style="width: 100%"
-        @update:model-value="$emit('update:modelValue', $event)"
+        @update:model-value="handleUpdate"
     />
 </template>
 
@@ -19,7 +19,11 @@ defineProps<{
   config?: PropConfig
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   'update:modelValue': [value: number]
 }>()
+
+function handleUpdate(value: number | undefined): void {
+    emit('update:modelValue', value ?? 0)
+}
 </script>

@@ -10,69 +10,14 @@ import type {
     AddEventPayload,
     AlterAnimationPayload,
     ShowContextMenuPayload,
-    ComponentStyle,
 } from '@/types'
 import { deepCopy, $ } from '@/utils/utils'
 import type { AnimationItem } from '@/utils/animationClassData'
 import { ElMessage } from 'element-plus'
 import generateID from '@/utils/generateID'
 import { setCommandContext } from '@/commands/BaseCommand'
-import { applyLocalChange, getCollab } from '@/collab/useCollabStore'
-import { createCommandContext } from '@/collab/commandContext'
-import { replaceAllComponents, fromComponentData, findYMapIndex, writeCanvas } from '@/collab/yDoc'
-import { isApplyingRemote } from '@/collab/undoOrigin'
+import { createCommandContext } from '@/commands/localContext'
 import { moveArrayItem, normalizeComponentLayerOrder, normalizeComponentZIndex, resolveLayerInsertIndex } from '@/utils/layer'
-import * as Y from 'yjs'
-
-// ==================== Yjs 镜像助手 ====================
-// store 中非命令路径(setComponentData/addComponent/setShapeStyle 等)的变更,
-// 需镜像到 Yjs 文档以同步给协同端。命令路径经 CommandContext 已自行镜像。
-
-/** 把当前 componentData 整体灌入 Yjs(用于加载/导入) */
-function syncAllToYjs(componentData: ComponentData[]): void {
-    const collab = getCollab()
-    if (!collab) return
-    applyLocalChange(() => {
-        replaceAllComponents(collab.collabDoc.yComponents, componentData)
-    })
-}
-
-/** 把单个组件的样式增量同步到 Yjs(属性级) */
-function syncStyleToYjs(componentId: string, patch: Partial<ComponentStyle>): void {
-    const collab = getCollab()
-    if (!collab) return
-    const arr = collab.collabDoc.yComponents
-    const idx = findYMapIndex(arr, componentId)
-    if (idx < 0) return
-    const ymap = arr.get(idx)
-    let styleMap = ymap.get('style') as Y.Map<unknown> | undefined
-    applyLocalChange(() => {
-        if (!styleMap) {
-            styleMap = new Y.Map()
-            ymap.set('style', styleMap)
-        }
-        for (const [k, v] of Object.entries(patch)) {
-            styleMap!.set(k, v)
-        }
-    })
-}
-
-/** 把单个组件整体同步到 Yjs */
-function syncComponentToYjs(component: ComponentData): void {
-    const collab = getCollab()
-    if (!collab) return
-    const arr = collab.collabDoc.yComponents
-    const idx = findYMapIndex(arr, component.id)
-    applyLocalChange(() => {
-        if (idx >= 0) {
-            fromComponentData(arr.get(idx), component)
-        } else {
-            const ymap = new Y.Map()
-            fromComponentData(ymap, component)
-            arr.push([ymap])
-        }
-    })
-}
 
 export const useStore = defineStore('main', {
     state: (): StoreState => ({
@@ -118,8 +63,7 @@ export const useStore = defineStore('main', {
         },
 
         /**
-         * 注入命令上下文(协同初始化时调用)。
-         * 命令经 ctx 操作组件数据,ctx 内部镜像到 Yjs。
+         * 注入命令上下文(初始化时调用)。
          */
         initCommandContext(): void {
             setCommandContext(createCommandContext())
@@ -143,10 +87,6 @@ export const useStore = defineStore('main', {
 
         setCanvasStyle(style: CanvasStyleData): void {
             this.canvasStyleData = style
-            if (!isApplyingRemote()) {
-                const collab = getCollab()
-                if (collab) applyLocalChange(() => writeCanvas(collab.collabDoc.yCanvas, style))
-            }
         },
 
         setCurComponent({ component, index }: SetCurComponentPayload): void {
@@ -157,25 +97,16 @@ export const useStore = defineStore('main', {
         setShapeStyle({ top, left, width, height, rotate }: SetShapeStylePayload): void {
             if (!this.curComponent) return
 
-            const patch: Partial<ComponentStyle> = {}
-            if (top !== undefined) { this.curComponent.style.top = Math.round(top); patch.top = this.curComponent.style.top }
-            if (left !== undefined) { this.curComponent.style.left = Math.round(left); patch.left = this.curComponent.style.left }
-            if (width !== undefined) { this.curComponent.style.width = Math.round(width); patch.width = this.curComponent.style.width }
-            if (height !== undefined) { this.curComponent.style.height = Math.round(height); patch.height = this.curComponent.style.height }
-            if (rotate !== undefined) { this.curComponent.style.rotate = Math.round(rotate); patch.rotate = this.curComponent.style.rotate }
-
-            // 拖拽/缩放期间高频更新:属性级同步到 Yjs(远端推送时跳过)
-            if (!isApplyingRemote() && Object.keys(patch).length > 0) {
-                syncStyleToYjs(this.curComponent.id, patch)
-            }
+            if (top !== undefined) { this.curComponent.style.top = Math.round(top) }
+            if (left !== undefined) { this.curComponent.style.left = Math.round(left) }
+            if (width !== undefined) { this.curComponent.style.width = Math.round(width) }
+            if (height !== undefined) { this.curComponent.style.height = Math.round(height) }
+            if (rotate !== undefined) { this.curComponent.style.rotate = Math.round(rotate) }
         },
 
         setShapeSingleStyle({ key, value }: { key: string; value: unknown }): void {
             if (this.curComponent) {
                 (this.curComponent.style as Record<string, unknown>)[key] = value
-                if (!isApplyingRemote()) {
-                    syncStyleToYjs(this.curComponent.id, { [key]: value } as Partial<ComponentStyle>)
-                }
             }
         },
 
@@ -183,7 +114,6 @@ export const useStore = defineStore('main', {
             this.componentData = componentData
             // 统一图层策略：数组顺序为准，zIndex 按数组顺序连续镜像
             this.ensureZIndex()
-            if (!isApplyingRemote()) syncAllToYjs(this.componentData)
             this.markDataDirty()
         },
 
@@ -191,7 +121,6 @@ export const useStore = defineStore('main', {
             const insertIndex = resolveLayerInsertIndex(this.componentData.length, index)
             this.componentData.splice(insertIndex, 0, component)
             normalizeComponentZIndex(this.componentData)
-            if (!isApplyingRemote()) syncAllToYjs(this.componentData)
             this.markDataDirty()
         },
 
@@ -217,7 +146,6 @@ export const useStore = defineStore('main', {
             if (typeof index === 'number' && index >= 0) {
                 this.componentData.splice(index, 1)
                 normalizeComponentZIndex(this.componentData)
-                if (!isApplyingRemote()) syncAllToYjs(this.componentData)
                 this.markDataDirty()
             }
         },
@@ -229,7 +157,6 @@ export const useStore = defineStore('main', {
         updateComponentProps(data: Partial<ComponentData>): void {
             if (this.curComponent) {
                 Object.assign(this.curComponent, data)
-                if (!isApplyingRemote()) syncComponentToYjs(this.curComponent)
             }
         },
 
@@ -240,7 +167,6 @@ export const useStore = defineStore('main', {
             moveArrayItem(this.componentData, index, index + 1)
             normalizeComponentZIndex(this.componentData)
             this.curComponentIndex = index + 1
-            if (!isApplyingRemote()) syncAllToYjs(this.componentData)
             this.markDataDirty()
         },
 
@@ -251,7 +177,6 @@ export const useStore = defineStore('main', {
             moveArrayItem(this.componentData, index, index - 1)
             normalizeComponentZIndex(this.componentData)
             this.curComponentIndex = index - 1
-            if (!isApplyingRemote()) syncAllToYjs(this.componentData)
             this.markDataDirty()
         },
 
@@ -262,7 +187,6 @@ export const useStore = defineStore('main', {
             moveArrayItem(this.componentData, index, this.componentData.length - 1)
             normalizeComponentZIndex(this.componentData)
             this.curComponentIndex = this.componentData.length - 1
-            if (!isApplyingRemote()) syncAllToYjs(this.componentData)
             this.markDataDirty()
         },
 
@@ -273,7 +197,6 @@ export const useStore = defineStore('main', {
             moveArrayItem(this.componentData, index, 0)
             normalizeComponentZIndex(this.componentData)
             this.curComponentIndex = 0
-            if (!isApplyingRemote()) syncAllToYjs(this.componentData)
             this.markDataDirty()
         },
 
@@ -288,28 +211,24 @@ export const useStore = defineStore('main', {
                     infinite: false,
                     applyTo: 'enter',
                 })
-                if (!isApplyingRemote()) syncComponentToYjs(this.curComponent)
             }
         },
 
         removeAnimation(index: number): void {
             if (this.curComponent) {
                 this.curComponent.animations.splice(index, 1)
-                if (!isApplyingRemote()) syncComponentToYjs(this.curComponent)
             }
         },
 
         addEvent({ event, param }: AddEventPayload): void {
             if (this.curComponent) {
                 this.curComponent.events[event] = param
-                if (!isApplyingRemote()) syncComponentToYjs(this.curComponent)
             }
         },
 
         removeEvent(event: string): void {
             if (this.curComponent) {
                 delete this.curComponent.events[event]
-                if (!isApplyingRemote()) syncComponentToYjs(this.curComponent)
             }
         },
 
@@ -318,7 +237,6 @@ export const useStore = defineStore('main', {
                 const original = this.curComponent.animations[index]
                 if (original) {
                     this.curComponent.animations[index] = { ...original, ...data }
-                    if (!isApplyingRemote()) syncComponentToYjs(this.curComponent)
                 }
             }
         },

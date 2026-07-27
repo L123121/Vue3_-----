@@ -19,7 +19,7 @@ interface DecomposeData {
  *
  * 注意:execute 依赖 store.editor.getBoundingClientRect()(DOM 测量),
  * 因此把计算结果(subComponents 完整快照)写入 data。
- * 远端不重放命令(只看 Yjs 状态),故 DOM 依赖不构成问题;
+ * 不重放命令,故 DOM 依赖不构成问题;
  * 跨会话恢复时直接用 data 中的 subComponents,无需重新测量。
  */
 export class DecomposeCommand extends BaseCommand {

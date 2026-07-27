@@ -32,13 +32,11 @@
             :width="width"
             :height="height"
         />
-        <!-- 协同:远端用户光标 -->
-        <RemoteCursors v-if="collabEnabled" />
     </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useStore } from '@/store'
 import { storeToRefs } from 'pinia'
 import ContextMenu from './ContextMenu.vue'
@@ -46,7 +44,6 @@ import MarkLine from './MarkLine.vue'
 import Area from './Area.vue'
 import Grid from './Grid.vue'
 import NodeRenderer from './NodeRenderer.vue'
-import RemoteCursors from './RemoteCursors.vue'
 import eventBus from '@/utils/eventBus'
 import { provideEditorContext } from '@/composables/useEditorContext'
 import {
@@ -56,8 +53,6 @@ import {
 import { $, isPreventDrop } from '@/utils/utils'
 import { changeStyleWithScale } from '@/utils/translate'
 import { isInViewport } from '@/utils/performance'
-import { createRAFThrottle } from '@/utils/performance'
-import { getCollab } from '@/collab/useCollabStore'
 import type { ComponentData } from '@/types'
 
 interface Props {
@@ -73,53 +68,6 @@ const { componentData, curComponent, canvasStyleData, editor, isDarkMode } = sto
 
 // 提供编辑器上下文给子组件（Shape、MarkLine、Area）
 const editorContext = provideEditorContext()
-
-// 协同是否启用
-const collabEnabled = !!getCollab()
-
-// 协同光标广播:把鼠标相对画布的坐标广播给同房间他人(RAF 节流)
-let cursorCleanup: (() => void) | null = null
-function setupCursorBroadcast(): void {
-    const collab = getCollab()
-    if (!collab) return
-
-    const throttled = createRAFThrottle(((x: number, y: number) => {
-        collab.awareness.setCursor({ x, y })
-    }) as (...args: unknown[]) => void) as (x: number, y: number) => void
-
-    const onMove = (e: MouseEvent): void => {
-        const el = editor.value
-        if (!el) return
-        const rect = el.getBoundingClientRect()
-        // 换算成画布内部坐标(考虑缩放)
-        const x = (e.clientX - rect.left) / (rect.width / el.clientWidth || 1)
-        const y = (e.clientY - rect.top) / (rect.height / el.clientHeight || 1)
-        throttled(x, y)
-    }
-
-    const onLeave = (): void => {
-        collab.awareness.setCursor(null)
-    }
-
-    const el = editor.value
-    if (el) {
-        el.addEventListener('mousemove', onMove)
-        el.addEventListener('mouseleave', onLeave)
-        cursorCleanup = () => {
-            el.removeEventListener('mousemove', onMove)
-            el.removeEventListener('mouseleave', onLeave)
-        }
-    }
-}
-
-// 协同选区广播:选中组件变化时广播给他人
-function setupSelectionBroadcast(): void {
-    const collab = getCollab()
-    if (!collab) return
-    watch(curComponent, (comp) => {
-        collab.awareness.setSelection(comp ? [comp.id] : [])
-    }, { immediate: true })
-}
 
 const editorX = ref(0)
 const editorY = ref(0)
@@ -165,17 +113,10 @@ onMounted(() => {
     // 注册 hideArea 回调（editorContext 用于内部触发，eventBus 用于 store 触发）
     editorContext.onHideArea(hideArea)
     eventBus.on('hideArea', hideArea)
-
-    // 协同:启动光标广播和选区广播
-    if (collabEnabled) {
-        setupCursorBroadcast()
-        setupSelectionBroadcast()
-    }
 })
 
 onUnmounted(() => {
     eventBus.off('hideArea', hideArea)
-    cursorCleanup?.()
 })
 
 function handleMouseDown(e: MouseEvent): void {

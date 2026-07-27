@@ -1,95 +1,71 @@
 /**
- * 低代码平台服务端
- * 整合: Express REST API + Yjs WebSocket 协同
- *
- * 启动:
- *   cd server && npm install && npm start
- *   或: node server/app.js
- *
- * 环境变量(.env):
- *   PORT          - API 端口(默认 3000)
- *   WS_PORT       - WS 端口(默认 1234,与 API 同端口时设为相同值)
- *   MONGODB_URI   - MongoDB 连接地址
- *   JWT_SECRET    - JWT 密钥
+ * 低代码平台 Express API。
  */
 
-import 'dotenv/config'
-import express from 'express'
+import './env.js'
 import cors from 'cors'
-import http from 'http'
-import { WebSocketServer } from 'ws'
-import { connectDB } from './config/db.js'
-import authRoutes from './routes/auth.js'
-import pagesRoutes from './routes/pages.js'
-import { setupYjsWebSocket } from './yjs-ws.js'
-import Page from './models/Page.js'
+import express from 'express'
+import helmet from 'helmet'
+import path from 'path'
+import { pathToFileURL } from 'url'
+import aiRoutes from './routes/ai.js'
+import agentRoutes from './routes/agent.js'
+import { envBoolean, envNumber } from './env.js'
+import {
+    createAIRateLimiter,
+    createApiKeyMiddleware,
+    createCorsOptions,
+    createGeneralRateLimiter,
+} from './security.js'
 
-const PORT = Number(process.env.PORT) || 3000
-const WS_PORT = Number(process.env.WS_PORT) || PORT
-const CORS_ORIGINS = process.env.CORS_ORIGIN
-    ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim()).filter(Boolean)
-    : []
-
-const app = express()
-const server = http.createServer(app)
-
-// ==================== 中间件 ====================
-app.use(cors(CORS_ORIGINS.length > 0 ? { origin: CORS_ORIGINS, credentials: true } : undefined))
-app.use(express.json({ limit: '10mb' }))
-
-// ==================== REST API 路由 ====================
-
-// 健康检查
-app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', timestamp: Date.now() })
-})
-
-// 用户认证
-app.use('/api/auth', authRoutes)
-
-// 页面 CRUD
-app.use('/api/pages', pagesRoutes)
-
-// 分享页面(无需认证)
-app.get('/api/shared/:token', async (req, res) => {
-    try {
-        const page = await Page.findOne({ shareToken: req.params.token, isPublic: true })
-        if (!page) {
-            return res.status(404).json({ error: '分享页面不存在或已取消分享' })
-        }
-        res.json({ page })
-    } catch (err) {
-        console.error('[shared page]', err)
-        res.status(500).json({ error: '获取分享页面失败' })
+export function createApp() {
+    const app = express()
+    if (envBoolean('TRUST_PROXY', process.env.NODE_ENV === 'production')) {
+        app.set('trust proxy', 1)
     }
-})
 
-// ==================== Yjs WebSocket 协同 ====================
-if (WS_PORT !== PORT) {
-    // 分离端口模式:另起一个 WS 服务
-    const wsServer = http.createServer()
-    const wss = new WebSocketServer({ server: wsServer })
-    setupYjsWebSocket(wss)
-    wsServer.listen(WS_PORT, () => {
-        console.log(`✅ Yjs 协同服务: ws://localhost:${WS_PORT}/<room-name>`)
+    app.disable('x-powered-by')
+    app.use(helmet({ contentSecurityPolicy: false }))
+    app.use(cors(createCorsOptions()))
+    app.use(createGeneralRateLimiter())
+    app.use(express.json({
+        limit: process.env.JSON_BODY_LIMIT || '2mb',
+        strict: true,
+    }))
+
+    app.get('/api/health', (req, res) => {
+        res.json({ status: 'ok', timestamp: Date.now() })
     })
-} else {
-    // 同端口模式:WS 和 HTTP 共享端口
-    const wss = new WebSocketServer({ server, path: '/ws' })
-    setupYjsWebSocket(wss)
+
+    const apiKeyMiddleware = createApiKeyMiddleware()
+    const aiRateLimiter = createAIRateLimiter()
+    app.use('/api/ai', apiKeyMiddleware, aiRateLimiter)
+    app.use('/api/ai', aiRoutes)
+    app.use('/api/ai/agent', agentRoutes)
+
+    app.use((error, req, res, next) => {
+        if (res.headersSent) return next(error)
+        const status = error?.type === 'entity.too.large' ? 413 : 500
+        const message = status === 413 ? '请求体过大' : (error?.message || '服务器内部错误')
+        return res.status(status).json({ error: message })
+    })
+
+    return app
 }
 
-// ==================== 启动 ====================
-async function start() {
-    await connectDB()
-
-    server.listen(PORT, () => {
-        console.log(`✅ API 服务: http://localhost:${PORT}`)
-        console.log('   注册: POST /api/auth/register')
-        console.log('   登录: POST /api/auth/login')
-        console.log('   页面: GET/POST/PUT/DELETE /api/pages')
-        console.log('   分享: GET /api/shared/:token')
+export function startServer(port = envNumber('PORT', 3000, { min: 0, max: 65535 }), options = {}) {
+    const app = createApp()
+    const server = app.listen(port, () => {
+        if (options.silent) return
+        const address = server.address()
+        const actualPort = typeof address === 'object' && address ? address.port : port
+        console.log(`API 服务: http://localhost:${actualPort}`)
+        console.log('AI 生成: POST /api/ai/chat')
+        console.log('AI Agent: POST /api/ai/agent/round')
+        console.log('健康检查: GET /api/health')
     })
+    return server
 }
 
-start()
+const entryPath = process.argv[1] ? pathToFileURL(path.resolve(process.argv[1])).href : ''
+if (entryPath === import.meta.url) startServer()

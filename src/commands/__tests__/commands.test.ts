@@ -8,7 +8,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { setCommandContext } from '@/commands/BaseCommand'
 import { useStore } from '@/store'
-import { toRaw } from 'vue'
+import { reactive, toRaw } from 'vue'
 import type { ComponentData, ComponentStyle, CopyData } from '@/types'
 import type { CommandContext } from '@/commands/types'
 
@@ -221,6 +221,25 @@ describe('AddComponentCommand', () => {
         cmd.execute()
 
         expect(store.componentData[1].id).toBe('c2')
+    })
+})
+
+describe('ImportDataCommand', () => {
+    it('可以导入 Vue 响应式预览数据并支持撤销', async () => {
+        const { ImportDataCommand } = await import('@/commands/ImportDataCommand')
+        const store = useStore()
+        store.setComponentData([makeComponent('existing')])
+        const preview = reactive([makeComponent('ai-preview')])
+
+        const cmd = new ImportDataCommand(preview)
+        expect(() => cmd.execute()).not.toThrow()
+        expect(store.componentData.map(component => component.id)).toEqual(['ai-preview'])
+
+        preview[0].propValue = 'changed outside command'
+        expect(store.componentData[0].propValue).toBe('hello')
+
+        cmd.undo()
+        expect(store.componentData.map(component => component.id)).toEqual(['existing'])
     })
 })
 
