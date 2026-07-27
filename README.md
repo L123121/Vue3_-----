@@ -1,685 +1,304 @@
 # Vue3 低代码可视化页面搭建平台
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Vue-3.2+-brightgreen.svg" alt="vue">
-  <img src="https://img.shields.io/badge/Vite-6.x-blue.svg" alt="vite">
+  <img src="https://img.shields.io/badge/Vue-3.2.47-brightgreen.svg" alt="vue">
+  <img src="https://img.shields.io/badge/Vite-6.1.0-blue.svg" alt="vite">
+  <img src="https://img.shields.io/badge/TypeScript-5.7-blue.svg" alt="typescript">
   <img src="https://img.shields.io/badge/Pinia-2.x-yellow.svg" alt="pinia">
   <img src="https://img.shields.io/badge/Element--Plus-2.x-green.svg" alt="element-plus">
-  <img src="https://img.shields.io/badge/TypeScript-5.x-blue.svg" alt="typescript">
-  <img src="https://img.shields.io/badge/ECharts-5.x-orange.svg" alt="echarts">
-  <img src="https://img.shields.io/badge/License-MIT-orange.svg" alt="license">
+  <img src="https://img.shields.io/badge/Express-4.x-black.svg" alt="express">
 </p>
 
-> 一个基于 **Vue 3** + **TypeScript** + **Vite** 的低代码可视化页面搭建平台，通过组件拖拽与配置化方式快速生成业务页面，支持复杂交互编辑与实时预览，应用于活动营销与落地页等高频页面构建场景，提供接近所见即所得的设计体验。
+基于 **Vue 3 + TypeScript + Vite** 的低代码页面编辑器，提供组件拖拽、属性配置、图层管理、撤销重做、JSON 导入导出、HTML 导出、版本历史、实时预览和 AI 页面生成能力。项目包含前端编辑器与 Express AI 服务端，适用于活动页、营销落地页、专题页等可视化搭建场景。
 
----
+## 项目截图
 
-## 项目背景
+项目根目录包含 `image.png`，可作为编辑器效果截图引用或替换为自己的演示图。
 
-### 什么是营销页面？
+![低代码平台截图](./image.png)
 
-营销页面是指用于商业推广和用户转化的专题页面，常见类型包括：
+## 核心功能
 
-| 类型 | 示例场景 |
+| 模块 | 当前实现 |
 | --- | --- |
-| 活动页 | 双11大促、618购物节、周年庆典 |
-| 落地页 | 新用户拉新、产品发布、限时优惠 |
-| 专题页 | 品牌宣传、新品首发、节日营销 |
+| 编辑器布局 | 顶部工具栏 + 左侧组件/图层面板 + 中间画布 + 右侧属性/动画/事件/命令面板 |
+| 组件拖拽 | 组件从左侧面板拖入画布，支持拖动、缩放、旋转、框选、多选与画布缩放 |
+| 属性配置 | 简单组件使用 `propConfigs` 自动渲染属性面板，复杂组件回退到独立 `Attr.vue` |
+| 图层管理 | 支持图层列表、上移、下移、置顶、置底、锁定、解锁 |
+| 命令系统 | 使用命令模式实现撤销、重做、组合、拆分、移动、缩放、旋转、导入、清空等操作 |
+| 数据导入导出 | 支持 JSON 导入导出，导入时通过 Zod Schema 校验并可重新生成组件 ID |
+| HTML 导出 | 通过 `exportHtml.ts` 生成静态 HTML，并使用 DOMPurify 做安全处理 |
+| 预览与截图 | 支持编辑器内预览、独立 `/preview` 路由和截图导出入口 |
+| 版本历史 | 支持保存、恢复、删除页面版本，版本快照保存在本地 |
+| 本地持久化 | 当前项目文档保存到 IndexedDB，失败时降级 localStorage，并兼容迁移旧版 `canvasData` / `canvasStyle` |
+| AI 页面生成 | 提供 AI Agent 面板，调用服务端 `/api/ai/agent/round` 进行多轮页面生成与编辑 |
 
-**痛点**：传统开发模式下，每次活动都需要前端手写代码，开发周期长、重复劳动多、上线效率低。
+## 编辑器结构
 
-**解决方案**：本平台让运营人员通过拖拽组件即可快速生成页面，无需编写代码，大幅提升页面生产效率。
-
----
-
-## 系统架构
-
-平台采用经典的三栏式编辑器布局，类似在线 PPT 编辑器：
-
-```
-┌─────────────┬─────────────────────────┬─────────────┐
-│             │                         │             │
-│  组件面板    │       画布编辑区         │  属性配置区  │
-│             │                         │             │
-│  - 文本     │    ┌───────────────┐    │  - 样式     │
-│  - 图片     │    │               │    │  - 属性     │
-│  - 按钮     │    │   可拖拽组件   │    │  - 事件     │
-│  - 表格     │    │               │    │  - 动画     │
-│  - 图表     │    └───────────────┘    │  - 联动     │
-│  - 图形     │                         │             │
-│             │                         │             │
-└─────────────┴─────────────────────────┴─────────────┘
+```text
+┌───────────────────────────────────────────────┐
+│ Toolbar：导入/导出/预览/保存/撤销/AI/主题/画布 │
+├───────────────┬─────────────────┬─────────────┤
+│ 左侧面板       │ 中间画布         │ 右侧面板     │
+│ ComponentList │ Editor/Shape     │ 属性配置     │
+│ 图层列表       │ Grid/MarkLine    │ 动画配置     │
+│               │ ContextMenu      │ 事件配置     │
+│               │ Preview          │ 命令时间线   │
+└───────────────┴─────────────────┴─────────────┘
 ```
 
-### 核心模块
+前端主页面位于 `src/views/Home.vue`，核心编辑器位于 `src/components/Editor/index.vue`，工具栏位于 `src/components/Toolbar.vue`。
 
-| 模块 | 功能描述 |
-| --- | --- |
-| **组件面板** | 提供文本、图片、按钮、表格、图表、图形等可拖拽组件 |
-| **画布区域** | 支持组件拖动、缩放、旋转、多选、自动对齐等交互 |
-| **属性面板** | 实时编辑组件样式、属性、事件绑定，双向联动更新 |
-| **版本管理** | 支持页面版本保存、恢复、删除，方便回溯历史版本 |
+## 内置组件
 
----
+组件模板定义在 `src/custom-component/component-list.ts`，组件注册逻辑位于 `src/custom-component/index.ts`。
 
-## 功能特性
-
-### 核心编辑器
-
-| 功能 | 描述 |
-| --- | --- |
-| 无限画布 | 支持画布缩放，适应不同尺寸页面设计 |
-| SVG 动态网格 | 提供可视化参考线，辅助组件定位 |
-| 实时预览 | 编辑即所见，支持预览模式查看最终效果 |
-| 自动吸附 | 组件靠近时自动对齐，提升排版效率 |
-| 标线对齐 | 智能显示对齐辅助线，精确布局 |
-| 撤销重做 | 命令模式双栈，支持命令合并，最多 50 步历史记录 |
-| 暗黑模式 | 支持明暗主题切换，保护眼睛 |
-
-### 组件库
-
-| 组件类型 | 组件名称 | 功能描述 |
+| 组件类型 | 显示名称 | 说明 |
 | --- | --- | --- |
-| **基础组件** | VText | 文本组件，支持富文本编辑、动态数据绑定 |
-| | VButton | 按钮组件，支持样式自定义、事件绑定 |
-| | Picture | 图片组件，支持图片翻转、圆角设置 |
-| | VTable | 表格组件，支持表头加粗、斑马纹样式 |
-| **图形组件** | RectShape | 矩形组件，支持边框、背景色设置 |
-| | CircleShape | 圆形组件，支持圆形/椭圆切换 |
-| | LineShape | 直线组件，支持颜色、粗细调整 |
-| **SVG 图形** | SVGStar | 星形组件，支持填充色、边框色设置 |
-| | SVGTriangle | 三角形组件，支持自定义尺寸 |
-| **高级组件** | VChart | ECharts 图表组件（vue-echarts 按需引入），支持柱状图、散点图、折线图等 |
-| | Group | 组合组件（internal，不在组件面板显示），支持多组件组合/拆分 |
-
-### 交互能力
-
-| 功能 | 快捷键 | 描述 |
-| --- | --- | --- |
-| 拖拽位移 | 鼠标左键拖动 | 自由移动组件位置 |
-| 八点缩放 | 拖拽控制点 | 八个方向调整组件大小 |
-| 旋转控制 | 拖拽旋转手柄 | 自由旋转组件角度 |
-| 多选操作 | Ctrl + 点击 | 框选或点选多个组件 |
-| 图层调整 | - | 上移/下移/置顶/置底 |
-| 锁定/解锁 | - | 防止误操作 |
-| 复制粘贴 | Ctrl+C / Ctrl+V | 快速复制组件 |
-| 删除组件 | Delete / Backspace | 删除选中组件 |
-
-### 进阶功能
-
-| 功能 | 描述 |
-| --- | --- |
-| **动画系统** | 内嵌 Animate.css 关键帧子集（74 种：进入 33 + 强调 10 + 退出 31），支持入场/离场动画，可配置时长、延迟、循环 |
-| **事件绑定** | 支持 redirect（安全跳转，阻止 javascript: 协议）和 alert（弹窗提示）事件 |
-| **组件联动** | 组件间数据联动，一个组件触发另一个组件样式变化（v-click / v-hover） |
-| **数据请求** | 支持配置 API 请求（GET/POST/PUT/DELETE），动态获取组件数据，支持定时轮询与请求次数限制 |
-| **右键菜单** | 提供快捷操作入口：复制、粘贴、剪切、删除、锁定、组合等 |
-| **JSON 导入导出** | 一键导出页面 JSON 数据，导入时通过 Zod 运行时校验数据格式 |
-| **HTML 导出** | 将画布导出为自包含独立 HTML 文件（内联样式 + 动画关键帧 + 事件绑定），双击即可在浏览器打开 |
-| **版本管理** | 保存页面历史版本，支持版本恢复和删除，持久化到 localStorage |
-| **AI 页面生成** | 多轮卡片决策式 AI Agent，通过布局→风格→配色→内容等多轮卡片交互，实时预览生成页面，用户可随时输入想法覆盖卡片选择 |
-| **命令时间线** | undo 历史可视化（CommandTimeline 组件），命令栈跨会话持久化到 IndexedDB |
-| **XSS 防护** | 使用 DOMPurify 净化富文本内容，HTML 导出时对 URL/CSS 进行安全校验 |
-
----
-
-## 核心设计
-
-### 1. 页面数据结构设计
-
-这是本系统的核心设计思想：**页面不是 DOM，而是一棵 JSON 树**。
-
-采用**扁平数组 + parentId** 作为主要数据结构描述页面与组件的层级关系（`componentData` 是一维数组，每个组件用 `parentId` 指向父组件，`null` 表示根级组件），通过 TypeScript 接口与枚举约束组件属性与交互行为，保障系统的类型安全与可扩展性。
-
-> **关于组合组件 Group**：作为扁平结构的特例，`Group` 组件的 `propValue` 是一个 `ComponentData[]` 嵌套数组，用于在组合时保存子组件的快照。这是一种"主结构扁平、组合节点局部嵌套"的混合模型——日常渲染与图层管理走扁平数组 + parentId，组合/拆分操作通过 Group 的 `propValue` 嵌套数组承载子组件。拆分（Decompose）时子组件会被重新摊平回主数组并恢复各自的 parentId。
-
-```typescript
-// 页面数据结构示例
-{
-  "id": "page_001",
-  "title": "双11活动页",
-  "components": [
-    {
-      "id": "text_001",
-      "component": "VText",
-      "label": "标题文本",
-      "style": {
-        "position": "absolute",
-        "top": 100,
-        "left": 200,
-        "width": 300,
-        "height": 50,
-        "fontSize": 24,
-        "color": "#333333"
-      },
-      "propValue": "限时优惠",
-      "animations": [],
-      "events": {},
-      "linkage": { duration: 0, data: [] }
-    },
-    {
-      "id": "image_001",
-      "component": "Picture",
-      "style": { "top": 200, "left": 100, "width": 400, "height": 300 },
-      "propValue": { "url": "https://example.com/banner.jpg", "flip": { "horizontal": false, "vertical": false } }
-    }
-  ]
-}
-```
-
-**渲染原理**：Vue 通过 `<component :is="componentMap[item.component]" v-bind="item" />` 动态渲染组件，实现数据驱动视图。
-
-### 2. 命令模式与撤销重做
-
-将用户操作抽象为命令对象，维护撤销/重做双栈，支持命令合并与批量操作。
-
-```typescript
-// CommandManager 核心逻辑
-class CommandManager {
-  private undoStack: Command[] = []
-  private redoStack: Command[] = []
-  private readonly config = { maxStackSize: 50, mergeTimeWindow: 300 }
-
-  execute(command: Command): void {
-    // 命令合并：300ms 内的同类操作自动合并
-    const lastCommand = this.undoStack[this.undoStack.length - 1]
-    if (this.shouldMerge(lastCommand, command)) {
-      const merged = lastCommand!.merge(command)
-      this.undoStack[this.undoStack.length - 1] = merged
-      merged.execute()
-      this.redoStack = []
-      return
-    }
-
-    command.execute()
-    this.undoStack.push(command)
-    this.redoStack = []
-
-    if (this.undoStack.length > this.config.maxStackSize) {
-      this.undoStack.shift()
-    }
-  }
-
-  undo(): boolean {
-    const command = this.undoStack.pop()
-    if (!command) return false
-    command.undo()
-    this.redoStack.push(command)
-    return true
-  }
-
-  redo(): boolean {
-    const command = this.redoStack.pop()
-    if (!command) return false
-    command.redo()
-    this.undoStack.push(command)
-    return true
-  }
-}
-```
-
-### 3. 状态管理与双向联动
-
-基于 Pinia 实现全局状态管理，属性面板与画布状态实时双向联动：
-
-```
-点击画布组件 → 更新 curComponent → 属性面板读取 store → 修改数据 → 自动驱动画布更新
-```
-
-### 4. 拖拽系统实现
-
-核心思想：**把鼠标位移映射成组件坐标变化**，通过 RAF 节流 + DOM 直写实现高性能拖拽。
-
-```typescript
-// Shape.vue 拖拽核心逻辑（简化版）
-function handleMouseDownOnShape(e: MouseEvent): void {
-  const pos = { ...props.defaultStyle }
-  let startY = e.clientY, startX = e.clientX
-  let startTop = pos.top, startLeft = pos.left
-
-  // RAF 节流：每帧只更新一次 store
-  const throttledMove = createRAFThrottle((curX, curY) => {
-    store.setShapeStyle({ top: startTop + (curY - startY), left: startLeft + (curX - startX) })
-    // 重设基线，下一帧只计算增量偏移
-    startY = curY; startX = curX
-    shapeRef.value.style.transform = ''
-  })
-
-  const move = (moveEvent: MouseEvent) => {
-    // 直接 DOM 操作：微量 transform，每帧 RAF 提交后归零
-    shapeRef.value.style.transform = `translate(${deltaX}px, ${deltaY}px)`
-    throttledMove(moveEvent.clientX, moveEvent.clientY)
-  }
-
-  const up = () => {
-    // 鼠标释放 → 创建 MoveCommand 入栈（可撤销）
-    store.moveComponent(props.element.id, oldStyle, newStyle)
-  }
-}
-```
-
-需要解决的问题：
-- 画布缩放比例适配
-- 元素自动吸附对齐
-- 多选拖拽
-- 边界限制
-- 性能优化（RAF 节流、DOM 直写、命令合并）
-
-### 5. 图层管理
-
-模拟 CSS 的 z-index 管理，支持：
-- 上移一层 / 下移一层
-- 置顶 / 置底
-- 锁定 / 解锁
-
-### 6. 自动对齐
-
-通过几何计算实现：
-- 判断组件中心点/边缘差值
-- 差值小于阈值时显示辅助线
-- 自动吸附对齐
-
-### 7. 版本管理
-
-支持页面版本管理功能：
-- **保存版本**：深拷贝当前页面快照，可添加版本名称和描述
-- **恢复版本**：通过 ImportDataCommand 恢复（支持撤销）
-- **删除版本**：清理不需要的历史版本
-- **本地存储**：版本数据持久化到 localStorage
-
----
+| `VText` | 文字 | 支持文字内容、颜色、字号、字重、对齐、行高、字间距等配置 |
+| `VButton` | 按钮 | 支持按钮文案、文字颜色、背景色、字号、圆角、边框等配置 |
+| `Picture` | 图片 | 支持图片 URL、水平翻转、垂直翻转 |
+| `RectShape` | 矩形 | 支持背景、边框、圆角，并作为当前唯一可接收子组件的容器 |
+| `CircleShape` | 圆形 | 支持填充色、边框色、边框宽度等配置 |
+| `LineShape` | 直线 | 支持线条颜色、长度、粗细 |
+| `SVGStar` | 星形 | SVG 图形组件 |
+| `SVGTriangle` | 三角形 | SVG 图形组件 |
+| `VTable` | 表格 | 支持复杂表格数据编辑，包含 `EditTable.vue` |
+| `VChart` | 图表 | 基于 ECharts / vue-echarts 渲染图表 |
+| `Group` | 组合 | 内部组件，不在组件面板展示，用于组合/拆分能力 |
 
 ## 技术栈
 
-| 技术 | 版本 | 作用 |
-| --- | --- | --- |
-| **Vue 3** | ^3.2.47 | 核心框架，使用 Composition API 开发，响应式渲染组件 |
-| **TypeScript** | ^5.7.0 | 类型约束，保障 JSON 数据结构的类型安全与可扩展性 |
-| **Pinia** | ^2.0.32 | 状态管理，管理画布数据、组件状态及命令历史 |
-| **Vue Router** | ^4.1.6 | 路由管理，支持编辑器与预览页切换 |
-| **Element Plus** | ^2.3.0 | UI 组件库，用于属性面板和侧边栏（全局 size: 'small'） |
-| **Vite** | ^6.1.0 | 构建工具，极速的热更新体验 |
-| **Zod** | ^4.3.6 | 运行时数据校验，校验导入的 JSON 数据结构 |
-| **ECharts** + **vue-echarts** | ^5.4.1 / ^6.5.4 | 数据可视化支持，VChart 组件按需引入图表类型 |
-| **Animate.css（内嵌）** | - | 动画关键帧，内嵌于 `src/styles/animate.scss` 编译使用（非 npm 依赖），含 74 种预置动画 |
-| **Ace Editor** | ^1.12.3（ace-builds） | 代码编辑器，用于 JSON 数据编辑 |
-| **html-to-image** | ^1.9.0 | 页面截图导出 |
-| **nanoid** | ^4.0.0 | 唯一 ID 生成，组件 ID 与版本 ID 均由 nanoid 生成 |
-| **axios** | ^1.18.1 | HTTP 请求库，用于 AI 生成 API 交互 |
-| **DOMPurify** | ^3.4.11 | XSS 防护，净化富文本内容与 HTML 导出输出 |
-| **Vitest** | ^3.1.0 | 单元测试框架，测试文件位于各模块 `__tests__/` 目录 |
-
----
-
-## 技术难点解析
-
-### 面试常见问题
-
-**Q: 这个项目难在哪？**
-
-1. **页面数据结构设计**：如何用 JSON 描述复杂页面结构，支持嵌套组件、动态属性
-2. **操作抽象与历史记录**：命令模式的设计，如何处理连续操作、批量操作
-3. **拖拽与坐标系统**：鼠标坐标到画布坐标的转换，缩放比例适配
-4. **数据与 UI 实时一致性**：响应式更新、性能优化、避免循环依赖
-5. **可扩展组件机制**：组件注册、动态加载、属性配置面板自动生成
-
-### 核心能力总结
-
-| 能力 | 描述 |
+| 技术 | 用途 |
 | --- | --- |
-| 数据抽象 | 把页面抽象为 JSON 数据结构（Zod Schema + TypeScript 接口） |
-| 操作抽象 | 把用户操作抽象为命令对象（Command Pattern + 命令合并） |
-| 数据驱动 | 用响应式数据驱动可视化系统（Pinia + Vue 3 Reactivity） |
-| 编辑体验 | 所见即所得编辑体验（RAF 节流 + DOM 直写 transform） |
-| 架构设计 | Composable 关注点分离 + provide/inject 类型安全通信 |
-| 数据校验 | 编译时 TypeScript + 运行时 Zod 双重保障 |
-
----
+| Vue 3 + Composition API | 前端应用与编辑器组件开发 |
+| TypeScript | 类型约束与组件数据结构定义 |
+| Vite | 开发服务器、构建和代码分包 |
+| Pinia | 画布数据、当前选中组件、主题、版本等状态管理 |
+| Element Plus | 工具栏、表单、弹窗、Tabs 等 UI 组件 |
+| Vue Router | `/` 编辑器页面与 `/preview` 独立预览页面 |
+| Zod | JSON 导入、组件数据、画布样式和版本数据校验 |
+| ECharts / vue-echarts | 图表组件渲染 |
+| Ace Editor | JSON 数据编辑器 |
+| html-to-image | 截图导出能力 |
+| DOMPurify | HTML 导出与富文本内容安全净化 |
+| Express | AI 服务端、鉴权、限流、CORS、健康检查 |
+| Vitest / Playwright | 单元测试与端到端测试 |
 
 ## 快速开始
 
 ### 环境要求
 
-- **Node.js** >= 18.0.0
-- **npm** >= 7.0.0 (或 pnpm / yarn)
+- Node.js >= 18
+- npm >= 7
 
-### 安装与运行
+### 安装依赖
 
 ```bash
-# 克隆项目
 git clone https://github.com/your-username/visual-drag-demo.git
 cd visual-drag-demo
-
-# 安装依赖
 npm install
-npm --prefix server install
-
-# 准备前端环境变量
-cp .env.example .env.local
-
-# 准备后端环境变量（AI_API_KEY 必填，用于 AI 页面生成）
-cp server/.env.example server/.env
-
-# 启动开发服务器（端口 8080）
-npm run dev
-
-# 启动后端服务：REST API + AI 生成（端口 3000）
-npm run api
-
-# 生产构建
-npm run build
-
-# 类型检查
-npm run type-check
-
-# 代码检查
-npm run lint
-
-# 单元测试
-npm run test:run
-
-# 服务端测试
-npm --prefix server test
-
-# 浏览器端到端测试
-npm run test:e2e
+npm run server:install
 ```
 
-访问 `http://localhost:8080` 即可开始编辑。点击工具栏"AI 生成"打开 AI Agent 面板，通过多轮卡片决策生成页面（需先启动后端并配置 `AI_API_KEY`）。
+也可以直接执行：
 
-环境变量说明：
+```bash
+npm --prefix server install
+```
 
-| 文件 | 变量 | 说明 |
-| --- | --- | --- |
-| `.env.local` | `VITE_API_BASE_URL` | 生产环境 API 完整地址；开发环境留空并使用 Vite 代理 |
-| `.env.local` | `VITE_DEV_API_PROXY_TARGET` | 开发代理目标，默认 `http://localhost:3000` |
-| `.env.local` | `VITE_API_ACCESS_KEY` | 可选 API 访问密钥，仅适合受控内网部署 |
-| `server/.env` | `AI_API_KEY` | LLM 服务密钥，AI 页面生成必填 |
-| `server/.env` | `AI_BASE_URL` | LLM 服务地址（可选，默认 stepfun） |
-| `server/.env` | `AI_MODEL` | 模型名（可选，默认 step-3.7-flash） |
-| `server/.env` | `CORS_ORIGIN` | 允许访问后端的前端域名，多个域名用逗号分隔 |
-| `server/.env` | `API_ACCESS_KEYS` | 可选 API Key 列表；生产环境配合 `REQUIRE_API_AUTH=true` |
-| `server/.env` | `REDIS_URL` | 可选 Redis 地址，用于跨实例保存 Agent 会话 |
-| `server/.env` | `AGENT_MAX_STEPS` | Agent 单轮最大模型决策次数，默认 12 |
+### 配置环境变量
 
-主画布以版本化 `ProjectDocument` 保存到 IndexedDB，启动时会自动迁移旧版 `canvasData` / `canvasStyle` localStorage 数据。版本历史功能仍独立保存在 localStorage。
+```bash
+cp .env.example .env.local
+cp server/.env.example server/.env
+```
 
-### 生产部署
+开发环境默认配置：
 
-- 前端可部署到 Vercel 等静态托管平台。
-- Express API 需要部署到独立 Node.js 服务，并在前端构建环境配置 `VITE_API_BASE_URL`。
-- 生产环境建议启用 `REQUIRE_API_AUTH=true`、配置 `API_ACCESS_KEYS`、严格设置 `CORS_ORIGIN`，并使用 Redis 保存 Agent 会话。
-- 浏览器内的 `VITE_API_ACCESS_KEY` 不能替代正式用户认证；公网产品应接入真实登录体系或 API 网关。
+- 前端：`http://localhost:8080`
+- 后端：`http://localhost:3000`
+- Vite 代理：`/api` -> `VITE_DEV_API_PROXY_TARGET`，默认 `http://localhost:3000`
 
----
+如需使用 AI 页面生成，请在 `server/.env` 中至少配置 `AI_API_KEY`。
+
+### 启动项目
+
+启动前端编辑器：
+
+```bash
+npm run dev
+```
+
+启动后端 AI 服务：
+
+```bash
+npm run api
+```
+
+启动后访问 `http://localhost:8080`。
+
+## 常用脚本
+
+| 命令 | 说明 |
+| --- | --- |
+| `npm run dev` | 启动 Vite 开发服务器，默认端口 8080 |
+| `npm run api` | 进入 `server` 并启动 Express 服务 |
+| `npm run server:install` | 安装服务端依赖 |
+| `npm run build` | 构建前端生产产物 |
+| `npm run preview` | 预览前端生产构建产物 |
+| `npm run type-check` | 执行 `vue-tsc --noEmit` 类型检查 |
+| `npm run lint` | 执行 ESLint 并自动修复 |
+| `npm run lint:check` | 只检查 ESLint 问题，不自动修复 |
+| `npm run test` | 启动 Vitest 监听模式 |
+| `npm run test:run` | 运行前端单元测试 |
+| `npm run test:coverage` | 运行单元测试并输出覆盖率 |
+| `npm run test:e2e` | 运行 Playwright 端到端测试 |
+| `npm --prefix server test` | 运行服务端 Node.js 测试 |
+
+## 环境变量
+
+### 前端 `.env.local`
+
+| 变量 | 说明 |
+| --- | --- |
+| `VITE_API_BASE_URL` | 生产环境 API 完整地址；开发环境留空时使用 Vite 代理 |
+| `VITE_DEV_API_PROXY_TARGET` | 开发环境代理目标，默认 `http://localhost:3000` |
+| `VITE_API_ACCESS_KEY` | 可选 API 访问密钥，仅适合受控内网部署 |
+
+### 后端 `server/.env`
+
+| 变量 | 说明 |
+| --- | --- |
+| `PORT` | Express 服务端口，默认 3000 |
+| `CORS_ORIGIN` | 允许访问后端的前端域名，多个域名用逗号分隔 |
+| `JSON_BODY_LIMIT` | 请求体大小限制，默认 `2mb` |
+| `TRUST_PROXY` | 生产代理场景下是否信任反向代理 |
+| `REQUIRE_API_AUTH` | 是否启用 API Key 鉴权 |
+| `API_ACCESS_KEYS` | API Key 列表，配合 `REQUIRE_API_AUTH=true` 使用 |
+| `RATE_LIMIT_*` | 通用接口限流配置 |
+| `AI_RATE_LIMIT_*` | AI 接口限流配置 |
+| `REDIS_URL` | 可选 Redis 地址，用于跨实例保存 Agent Session |
+| `SESSION_TTL_MS` | Agent Session 过期时间 |
+| `AI_API_KEY` | 主 LLM 服务密钥，AI 页面生成必填 |
+| `AI_BASE_URL` | 主 LLM 服务地址，默认 StepFun 兼容接口 |
+| `AI_MODEL` | 主模型名，默认 `step-3.7-flash` |
+| `AI_FALLBACK_*` | 备用 LLM 服务配置，兼容 OpenAI Chat Completions 格式 |
+| `AGENT_MAX_*` | Agent 执行步数、时长、修复轮次、上下文大小等预算配置 |
+
+## 后端 API
+
+服务端入口为 `server/app.js`，路由集中在 `server/routes`。
+
+| 接口 | 说明 |
+| --- | --- |
+| `GET /api/health` | 健康检查 |
+| `POST /api/ai/chat` | 旧版 AI 生成接口，返回页面生成/编辑动作 |
+| `POST /api/ai/agent/round` | AI Agent 多轮接口，支持普通 JSON 返回与 `stream=true` SSE 流式返回 |
+
+服务端默认启用 Helmet、CORS、通用限流、AI 限流，并可通过 `REQUIRE_API_AUTH` + `API_ACCESS_KEYS` 启用接口鉴权。
+
+## 数据与状态设计
+
+核心类型定义位于 `src/types/index.ts`，运行时校验位于 `src/schemas/index.ts`。
+
+```ts
+interface ComponentData {
+  id: string
+  component: string
+  label: string
+  icon: string
+  propValue: unknown
+  style: ComponentStyle
+  parentId: string | null
+  slot: string
+  zIndex: number
+  request?: RequestConfig
+  animations: Animation[]
+  events: Record<string, string>
+  groupStyle: Record<string, unknown>
+  isLock: boolean
+  collapseName: string
+  linkage: LinkageConfig
+}
+```
+
+当前画布数据由 Pinia Store 管理，`src/storage/projectStorage.ts` 负责保存版本化 `ProjectDocument`：
+
+- 优先保存到 IndexedDB。
+- IndexedDB 不可用时降级到 localStorage。
+- 首次启动时会尝试迁移旧版 `canvasData` / `canvasStyle`。
+- 版本历史快照仍由 `useVersionManager.ts` 维护在本地存储中。
 
 ## 项目结构
 
 ```text
 src/
-├── components/              # 编辑器核心 UI
-│   ├── Editor/              # 画布渲染引擎
-│   │   ├── index.vue        # 编辑器主入口
-│   │   ├── Shape.vue        # 组件包装器（拖拽、缩放、旋转）
-│   │   ├── MarkLine.vue     # 对齐辅助线
-│   │   ├── Grid.vue         # SVG 网格背景
-│   │   ├── Area.vue         # 框选区域
-│   │   ├── ContextMenu.vue  # 右键菜单
-│   │   ├── Preview.vue      # 预览模式
-│   │   ├── AceEditor.vue    # JSON 编辑器
-│   │   ├── ComponentWrapper.vue  # 组件包装器
-│   │   ├── NodeRenderer.vue      # 递归组件渲染器（parentId 嵌套）
-│   │   └── PreviewNodeRenderer.vue # 预览模式递归渲染器
-│   ├── AIPanel.vue          # AI Agent 面板（多轮卡片决策）
-│   ├── agent/                # Agent 子组件
-│   │   ├── ProgressBar.vue   # 进度条
-│   │   ├── CardGrid.vue      # 卡片网格
-│   │   ├── AgentMessage.vue  # 消息气泡
-│   │   ├── InputBar.vue      # 输入框
-│   │   └── PreviewNode.vue   # 预览节点渲染
-│   ├── Toolbar.vue          # 顶部工具栏
-│   ├── ComponentList.vue    # 左侧组件列表
-│   ├── RealTimeComponentList.vue # 图层列表
-│   ├── CanvasAttr.vue       # 画布属性配置
-│   ├── AnimationList.vue    # 动画列表
-│   ├── AnimationSettingModal.vue # 动画设置弹窗
-│   ├── EventList.vue        # 事件列表
-│   ├── VersionHistory.vue   # 版本历史
-│   ├── CommandTimeline.vue  # 命令时间线（undo 历史可视化）
-│   └── Modal.vue            # 通用弹窗
-├── custom-component/        # 低代码组件实现
-│   ├── VText/               # 文本组件
-│   │   ├── Component.vue    # 组件实现
-│   │   └── Attr.vue         # 属性配置面板
-│   ├── VButton/             # 按钮组件
-│   ├── Picture/             # 图片组件
-│   ├── RectShape/           # 矩形组件（唯一 acceptChildren 容器）
-│   ├── CircleShape/         # 圆形组件
-│   ├── LineShape/           # 直线组件
-│   ├── VTable/              # 表格组件（含 EditTable.vue 行列编辑）
-│   ├── VChart/              # 图表组件（vue-echarts 按需引入）
-│   ├── Group/               # 组合组件（internal，不在面板显示）
-│   ├── svgs/                # SVG 图形组件
-│   │   ├── SVGStar/         # 星形
-│   │   └── SVGTriangle/     # 三角形
-│   ├── common/              # 组件通用配置
-│   │   ├── CommonAttr.vue   # 通用属性面板
-│   │   ├── OnEvent.vue      # 事件配置（旧版，已被 useOnEvent.ts 替代）
-│   │   ├── useOnEvent.ts    # 事件联动 Hook（Composition API）
-│   │   ├── Request.vue      # 数据请求配置
-│   │   └── Linkage.vue      # 组件联动配置
-│   ├── controls/            # 属性面板基础控件
-│   │   ├── index.ts         # 控件注册映射表（controlMap）
-│   │   ├── InputControl.vue
-│   │   ├── TextareaControl.vue
-│   │   ├── NumberControl.vue
-│   │   ├── ColorControl.vue
-│   │   ├── SelectControl.vue
-│   │   └── SwitchControl.vue
-│   ├── PropPanelRenderer.vue # 元数据驱动属性面板渲染器
-│   ├── component-list.ts    # 组件模板列表
-│   ├── registry.ts          # 组件注册表（registerComponent API）
-│   └── index.ts             # 组件注册入口
-├── api/                     # API 服务
-│   ├── ai.ts                # AI 页面生成 API（旧版单轮）
-│   └── agent.ts             # AI Agent 多轮决策 API
-├── composables/             # Composable 函数
-│   ├── useAutoSave.ts       # 自动保存（脏标记 + 防抖）
-│   ├── useCommandActions.ts # 命令操作（撤销/重做/命令执行）
-│   ├── useCommandHistory.ts # 命令历史跨会话持久化（IndexedDB）
-│   ├── useVersionManager.ts # 版本管理（保存/恢复/删除）
-│   ├── useDragDrop.ts       # 拖拽放置逻辑
-│   ├── usePanelToggle.ts    # 面板切换状态
-│   └── useEditorContext.ts  # 编辑器上下文（provide/inject）
-├── store/                   # 状态管理
-│   └── index.ts             # 主 Pinia Store（画布数据、命令历史、版本等）
-├── types/                   # TypeScript 类型定义
-│   └── index.ts             # 核心类型定义（无 enum，全用联合类型）
-├── schemas/                 # Zod Schema 定义
-│   ├── index.ts             # 运行时数据校验 Schema（递归 ComponentDataSchema）
-│   └── __tests__/           # Schema 测试
-├── commands/                # 命令模式实现
-│   ├── CommandManager.ts    # 命令管理器（双栈 + 合并 + 跨会话序列化）
-│   ├── BaseCommand.ts       # 命令基类（含 setCommandContext 上下文注入）
-│   ├── registry.ts          # 命令注册表（register + deserialize）
-│   ├── MoveCommand.ts       # 移动命令（可合并）
-│   ├── ResizeCommand.ts     # 缩放命令（可合并）
-│   ├── RotateCommand.ts     # 旋转命令（可合并）
-│   ├── AddComponentCommand.ts
-│   ├── DeleteComponentCommand.ts  # 级联删除子组件
-│   ├── LayerCommand.ts      # 图层命令（LAYER_UP/DOWN/TOP/BOTTOM）
-│   ├── ComposeCommand.ts
-│   ├── DecomposeCommand.ts
-│   ├── PasteCommand.ts
-│   ├── CutCommand.ts
-│   ├── ClearCanvasCommand.ts
-│   ├── ImportDataCommand.ts
-│   ├── BatchCommand.ts
-│   ├── setup.ts             # 命令注册入口（registerAllCommands）
-│   ├── index.ts
-│   ├── types.ts             # CommandType 枚举 + Command 接口
-│   └── __tests__/           # 命令测试（4 个测试文件）
-├── utils/                   # 工具函数
-│   ├── utils.ts             # 通用工具（deepCopy、swap、$、isPreventDrop）
-│   ├── eventBus.ts          # 类型安全事件总线（EventMap 泛型）
-│   ├── generateID.ts        # ID 生成器（nanoid）
-│   ├── style.ts             # 样式计算
-│   ├── translate.ts         # 坐标转换（旋转矩阵、缩放比例）
-│   ├── calculateComponentPositionAndSize.ts # 八点缩放计算
-│   ├── changeComponentsSizeWithScale.ts # 画布缩放适配
-│   ├── performance.ts       # 性能工具（RAF 节流、视口裁剪、拖拽状态）
-│   ├── validation.ts        # Zod 校验工具函数
-│   ├── request.ts           # 数据请求（XMLHttpRequest + 定时轮询）
-│   ├── api.ts               # 服务端 API 交互（axios + 认证）
-│   ├── attr.ts              # 属性面板配置数据
-│   ├── sanitize.ts          # XSS 净化（escapeHtml、isValidImageUrl、isValidCssColor）
-│   ├── exportHtml.ts        # HTML 导出引擎（组件→内联 HTML + 动画 + 事件）
-│   ├── shortcutKey.ts       # 快捷键处理（使用 e.key）
-│   ├── animationClassData.ts # 动画分类数据（74 种：进入 33 + 强调 10 + 退出 31）
-│   ├── runAnimation.ts      # 动画执行
-│   ├── events.ts            # 事件处理（redirect、alert）
-│   ├── decomposeComponent.ts # 组件拆分
-│   └── __tests__/           # 工具测试（8 个测试文件）
-├── styles/                  # 全局样式
-│   ├── global.scss          # 全局样式
-│   ├── dark.scss            # 暗黑模式
-│   ├── animate.scss         # 动画样式（内嵌 animate.css 关键帧子集）
-│   ├── variable.scss        # 样式变量
-│   └── reset.css            # 样式重置
-├── views/                   # 页面入口
-│   ├── Home.vue             # 编辑器主页面
-│   └── PreviewPage.vue      # iframe 预览独立页面（/preview 路由）
-├── router/                  # 路由配置
-│   └── index.ts             # 2 条路由（/ 编辑器，/preview 预览）
-├── App.vue                  # 根组件
-├── main.ts                  # 入口文件（挂载插件 + 命令注册 + 上下文初始化）
-└── env.d.ts                 # 环境类型声明
+├── api/                    # 前端请求封装与 AI Agent API
+├── commands/               # 命令模式：撤销、重做、移动、缩放、组合、导入等
+├── components/             # 编辑器 UI、工具栏、属性面板、AI 面板
+│   ├── Editor/             # 画布、组件外框、网格、辅助线、预览渲染
+│   └── agent/              # AI Agent 前端展示与测试相关模块
+├── composables/            # 自动保存、拖拽、命令操作、面板开关等组合式逻辑
+├── custom-component/       # 低代码组件实现、组件注册表、属性面板渲染器
+├── router/                 # `/` 与 `/preview` 路由
+├── schemas/                # Zod 数据校验 Schema
+├── storage/                # IndexedDB / localStorage 项目文档存储
+├── store/                  # Pinia 主状态仓库
+├── styles/                 # 全局样式、暗黑模式、动画样式
+├── types/                  # 前端类型定义
+├── utils/                  # 事件、导出、校验、图层、动画、样式等工具函数
+└── views/                  # Home 编辑器页面与 PreviewPage 独立预览页
 
-server/                      # 后端服务（Express REST API）
-├── app.js                   # AI 服务入口
-├── sessionStore.js          # Agent Session 存储
-├── agentHelper.js           # Agent 辅助函数（系统提示词/输出解析）
-├── routes/
-│   ├── ai.js                # AI 生成路由（POST /api/ai/chat，旧版）
-│   └── agent.js             # AI Agent 路由（POST /api/ai/agent/round）
-└── utils/
-    └── nanoid.js            # 服务端 ID 生成
+server/
+├── app.js                  # Express 应用入口
+├── env.js                  # 环境变量读取工具
+├── security.js             # CORS、限流、API Key 鉴权
+├── llmProvider.js          # 主/备用 LLM Provider 池
+├── sessionStore.js         # Agent Session 存储，支持 Redis
+├── routes/                 # `/api/ai/chat` 与 `/api/ai/agent/round`
+├── agent/                  # Agent Prompt、工具调用、输出解析、SSE、执行循环
+├── utils/                  # 请求校验与 ID 工具
+└── __tests__/              # 服务端测试
+
+e2e/                        # Playwright 端到端测试
 ```
 
----
+## 测试说明
 
-## 核心类型定义
+- 前端单元测试使用 Vitest，测试文件位于 `src/**/__tests__/*.test.ts`。
+- 服务端测试使用 Node.js 内置测试运行器，入口为 `server/__tests__/app.test.js`。
+- E2E 测试使用 Playwright，测试文件位于 `e2e/`，配置会自动启动 `npm run dev -- --host 127.0.0.1`。
 
-项目使用 TypeScript 定义了完整的类型系统，主要类型包括：
-
-```typescript
-// 组件数据结构
-interface ComponentData {
-  id: string
-  component: string          // 组件类型
-  label: string              // 组件标签
-  icon: string               // 图标
-  propValue: PropValue       // 组件属性值（string | PicturePropValue | TablePropValue | ChartPropValue | ComponentData[]）
-  style: ComponentStyle      // 样式配置
-  parentId: string | null    // 父组件 ID，null 表示根级组件
-  slot: string               // 插入的插槽名称
-  zIndex: number             // 视觉层级，值越大越靠上
-  request?: RequestConfig    // 数据请求配置
-  animations: Animation[]    // 动画列表
-  events: Record<string, string>  // 事件配置
-  groupStyle: Record<string, unknown>  // 组合样式（相对坐标）
-  isLock: boolean            // 是否锁定
-  collapseName: string       // 折叠面板名称
-  linkage: LinkageConfig     // 联动配置
-}
-
-// 版本管理
-interface PageVersion {
-  id: string
-  name: string               // 版本名称
-  description: string        // 版本描述
-  snapshot: ComponentData[]  // 页面快照
-  createdAt: string          // 创建时间
-  thumbnail?: string         // 缩略图
-}
+```bash
+npm run test:run
+npm --prefix server test
+npm run test:e2e
 ```
 
-完整类型定义请参考 `src/types/index.ts`。
+## 扩展组件
 
----
+新增组件时建议按当前注册机制扩展：
 
-## 扩展开发
+1. 在 `src/custom-component/` 下创建组件目录，至少包含 `Component.vue` 与 `Attr.vue`。
+2. 在 `src/custom-component/component-list.ts` 中添加组件模板，包括 `component`、`label`、`icon`、`propValue`、`style` 等字段。
+3. 如果属性配置较简单，在 `componentPropConfigs` 中声明控件配置，让 `PropPanelRenderer.vue` 自动生成属性表单。
+4. 如果属性配置较复杂，保留独立 `Attr.vue`，例如 `VTable`、`VChart`。
+5. 如需允许子组件放入容器，在注册元数据中设置 `acceptChildren: true`，当前项目默认只有 `RectShape` 开启。
+6. 内部组件可设置 `internal: true`，例如 `Group` 不会展示在组件面板中。
 
-### 添加新组件
+## 生产部署
 
-1. 在 `src/custom-component/` 下创建组件目录（含 `Component.vue` 和可选的 `Attr.vue`）
-2. 在 `src/custom-component/component-list.ts` 中添加组件模板（默认 propValue、style 等）
-3. 在 `src/custom-component/index.ts` 中调用 `registerComponent(type, component, meta, attrComponent?)` 注册
-4. 元数据 `meta` 中通过 `propConfigs` 声明属性面板配置（支持 input/textarea/number/color/select/switch 六种控件），有 propConfigs 时属性面板自动渲染，无则回退到 `Attr.vue`
-5. 容器组件需设置 `acceptChildren: true` 并在 Component.vue 中暴露 `<slot />`
-6. 内部组件（如 Group）设置 `internal: true`，不在组件面板显示但可参与渲染
-
-### 组件开发示例
-
-```vue
-<!-- Component.vue -->
-<template>
-  <div class="my-component" :style="style">
-    {{ propValue }}
-  </div>
-</template>
-
-<script setup lang="ts">
-import { computed } from 'vue'
-import type { ComponentData } from '@/types'
-
-const props = defineProps<{
-  propValue: string
-  style: Record<string, any>
-}>()
-
-const style = computed(() => ({
-  width: `${props.style.width}px`,
-  height: `${props.style.height}px`,
-  // ...其他样式
-}))
-</script>
-```
-
-```typescript
-// index.ts 中的注册示例
-registerComponent('MyComponent', MyComp, {
-  type: 'MyComponent',
-  label: '我的组件',
-  icon: 'myicon',
-  acceptChildren: false,
-  propConfigs: [
-    { key: 'propValue', label: '文字内容', type: 'textarea' },
-    { key: 'style.color', label: '文字颜色', type: 'color' },
-  ],
-}, MyAttr)
-```
-
----
-
-## 技术参考
-
-如果你对实现原理感兴趣，可以参考以下技术文章：
-
-- [可视化拖拽组件库一些技术要点原理分析](https://github.com/woai3c/Front-end-articles/issues/19)
-- [可视化拖拽组件库一些技术要点原理分析（二）](https://github.com/woai3c/Front-end-articles/issues/20)
-- [可视化拖拽组件库一些技术要点原理分析（三）](https://github.com/woai3c/Front-end-articles/issues/21)
-- [可视化拖拽组件库一些技术要点原理分析（四）](https://github.com/woai3c/Front-end-articles/issues/33)
-- [低代码与大语言模型的探索实践](https://github.com/woai3c/Front-end-articles/issues/45)
-
----
+- 前端执行 `npm run build` 后部署 `dist/` 到静态托管平台。
+- 后端 `server/` 需要作为独立 Node.js 服务部署，并在前端构建环境设置 `VITE_API_BASE_URL`。
+- 生产环境建议开启 `REQUIRE_API_AUTH=true`，配置 `API_ACCESS_KEYS`，严格设置 `CORS_ORIGIN`。
+- 多实例部署 AI Agent 时建议配置 `REDIS_URL`，避免 Session 只保存在单进程内存中。
+- `VITE_API_ACCESS_KEY` 会进入浏览器产物，不能替代正式登录态或后端权限体系。
 
 ## 相关文档
 
-- [TypeScript 迁移方案](./docs/TYPESCRIPT_MIGRATION.md) - 详细的 TypeScript 迁移指南
-
----
+- [TypeScript 迁移方案](./docs/TYPESCRIPT_MIGRATION.md)
 
 ## License
 
-[MIT](LICENSE)
+MIT
