@@ -76,7 +76,7 @@ import { useStore } from '@/store'
 import { storeToRefs } from 'pinia'
 import { ElMessage } from 'element-plus'
 import { Delete } from '@element-plus/icons-vue'
-import { urlRE, getURL } from '@/utils/request'
+import { isValidRequestUrl } from '@/utils/request'
 
 const store = useStore()
 const { curComponent } = storeToRefs(store)
@@ -118,7 +118,7 @@ function onChnage() {
 
 function validateURL() {
     const url = request.value.url
-    if (url && /^\d+$/.test(url) || !urlRE.test(getURL(url))) {
+    if (url && !isValidRequestUrl(url)) {
         ElMessage.error('请输入正确的 URL')
     }
 }

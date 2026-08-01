@@ -246,6 +246,24 @@ export function parseDecision(message) {
     )
 }
 
+/**
+ * 解析 LLM 消息为多个决策（批处理）。
+ * 当一次返回多个函数调用（tool_calls）时逐条标准化，
+ * 单工具 / JSON / legacy 场景退化为单元素数组，保持向后兼容。
+ * @param {object} message — LLM 返回的 message 对象
+ * @returns {object[]} 标准化决策数组
+ */
+export function parseDecisions(message) {
+    const toolCalls = message?.tool_calls
+    if (Array.isArray(toolCalls) && toolCalls.length > 1) {
+        return toolCalls.map(toolCall => {
+            const args = safeJsonParse(toolCall.function?.arguments, {})
+            return normalizeFunctionDecision(toolCall.function?.name, args, message.content || '')
+        })
+    }
+    return [parseDecision(message)]
+}
+
 // ==================== Steps 解析（legacy 模式） ====================
 
 /**

@@ -39,6 +39,48 @@ function shouldCheckOverlap(component) {
         && !['RectShape', 'CircleShape', 'LineShape'].includes(component.component)
 }
 
+/**
+ * 轻量增量校验：只检查单个组件是否合法、是否出界。
+ * 供变更工具执行后即时反馈，避免每步都跑全量 O(n²) 重叠检测。
+ */
+export function validateComponentPlacement(component, canvasStyle) {
+    if (!component || typeof component !== 'object') {
+        return [{
+            code: 'MISSING_COMPONENT',
+            severity: 'error',
+            componentIds: [],
+            message: '组件数据缺失',
+            suggestion: '重新创建该组件',
+        }]
+    }
+    const issues = []
+    const canvasWidth = finiteNumber(canvasStyle?.width)
+    const canvasHeight = finiteNumber(canvasStyle?.height)
+    const { width, height, top, left } = getBounds(component)
+
+    if (width <= 0 || height <= 0) {
+        issues.push({
+            code: 'INVALID_SIZE',
+            severity: 'error',
+            componentIds: [component.id],
+            message: `组件「${component.label || component.component}」宽高必须大于 0`,
+            suggestion: '设置合理的 width 和 height',
+        })
+    }
+
+    if (left < 0 || top < 0 || left + width > canvasWidth || top + height > canvasHeight) {
+        issues.push({
+            code: 'OUT_OF_BOUNDS',
+            severity: 'warning',
+            componentIds: [component.id],
+            message: `组件「${component.label || component.component}」超出画布边界`,
+            suggestion: `将组件限制在 ${canvasWidth}×${canvasHeight} 画布内`,
+        })
+    }
+
+    return issues
+}
+
 export function validateCanvas(components, canvasStyle) {
     const errors = []
     const warnings = []

@@ -22,6 +22,7 @@ import './ImportDataCommand'
 import './PasteCommand'
 import './CutCommand'
 import './BatchCommand'
+import './StyleChangeCommand'
 
 export function registerAllCommands(): void {
     // 所有注册已在 import 时完成。此函数作为显式初始化的入口点。

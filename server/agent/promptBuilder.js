@@ -4,6 +4,72 @@
  */
 
 import { TOOLS } from './toolRegistry.js'
+import { envNumber } from '../env.js'
+
+// ==================== Token 预算 ====================
+
+/**
+ * 粗略估算文本 token 数（中文按 1 字 ≈ 1 token，英文按 4 字符 ≈ 1 token）。
+ * 仅用于上下文预算控制，不追求精确。
+ */
+export function estimateTokens(text) {
+    const str = String(text || '')
+    let cjk = 0
+    let other = 0
+    for (const ch of str) {
+        if (/[\u4e00-\u9fff]/.test(ch)) cjk++
+        else other++
+    }
+    return Math.ceil(cjk + other / 4)
+}
+
+/** 历史摘要最大 token 预算 */
+const HISTORY_TOKEN_BUDGET = envNumber('AGENT_HISTORY_TOKEN_BUDGET', 1500, { min: 200 })
+/** 画布观察结果最大 token 预算 */
+const OBSERVATION_TOKEN_BUDGET = envNumber('AGENT_OBSERVATION_TOKEN_BUDGET', 3000, { min: 200 })
+
+/**
+ * 按预算截断文本，超限时保留开头并追加省略标记。
+ */
+function truncateByBudget(text, budget) {
+    const str = String(text || '')
+    if (estimateTokens(str) <= budget) return str
+    // 逐段二分逼近预算内最大前缀，避免截断点破坏 JSON 结构
+    let low = 0
+    let high = str.length
+    while (low < high) {
+        const mid = Math.ceil((low + high) / 2)
+        if (estimateTokens(str.slice(0, mid)) <= budget) low = mid
+        else high = mid - 1
+    }
+    return `${str.slice(0, low)}\n…(上下文过长已截断)`
+}
+
+/** 压缩画布观察结果为紧凑文本表格，控制发送给 LLM 的体积 */
+export function formatObservation(observation) {
+    if (!observation || typeof observation !== 'object') return '{}'
+    const canvas = observation.canvas && typeof observation.canvas === 'object'
+        ? observation.canvas
+        : {}
+    const lines = [
+        `画布 ${canvas.width || '?'}x${canvas.height || '?'} ${canvas.backgroundColor || ''} 组件数 ${canvas.componentCount ?? 0}${canvas.omittedComponentCount ? `(省略 ${canvas.omittedComponentCount} 个)` : ''}`,
+    ]
+    const selectedIds = Array.isArray(observation.selectedComponentIds)
+        ? observation.selectedComponentIds
+        : []
+    if (selectedIds.length) lines.push(`选中组件: ${selectedIds.join(', ')}`)
+
+    const components = Array.isArray(observation.components) ? observation.components : []
+    if (components.length) {
+        lines.push('组件列表:')
+        for (const c of components) {
+            lines.push(
+                `- [${c.id}] ${c.component} "${String(c.label || '')}" 位置(${c.left ?? '?'},${c.top ?? '?'}) 尺寸${c.width ?? '?'}x${c.height ?? '?'} zIndex ${c.zIndex ?? '?'}`,
+            )
+        }
+    }
+    return truncateByBudget(lines.join('\n'), OBSERVATION_TOKEN_BUDGET)
+}
 
 // ==================== Loop 模式提示词 ====================
 
@@ -20,6 +86,7 @@ export const LOOP_SYSTEM_PROMPT = `你是低代码画布执行 Agent。你需要
 8. 不输出内部推理过程，只提供一句简短 summary 说明当前动作。
 9. 组件必须位于画布内，宽高必须大于 0。
 10. 执行 3~5 步工具后如果仍未完成，应调用 ask_user 确认方向，不要连续执行超过 8 步而不询问用户。
+11. 若模型支持函数工具，可在一次回复中返回多个相互独立、且不依赖上一步中间结果的工具调用（如连续添加多个组件、连续移动多个组件），减少往返次数；观察画布、询问用户、完成任务仍为单动作。
 
 如果当前模型不支持函数工具，输出严格 JSON：
 {"action":"tool_call|ask_user|finish","summary":"简短状态","toolName":"工具名","args":{},"question":"问题","options":[],"finishSummary":"完成说明"}`
@@ -140,7 +207,7 @@ export function buildPromptForMode(mode) {
  * @returns {string}
  */
 export function buildHistoryContext(session) {
-    return session.history.slice(-3).map(round => {
+    const summary = session.history.slice(-3).map(round => {
         const userGoal = String(round.userInput?.value || '').trim()
         const summaries = round.steps
             .filter(step => step.type === 'tool_result' || step.type === 'user_input' || step.type === 'done')
@@ -152,6 +219,7 @@ export function buildHistoryContext(session) {
             summaries.length ? `执行摘要：${summaries.join('；')}` : '',
         ].filter(Boolean).join('\n')
     }).join('\n')
+    return truncateByBudget(summary, HISTORY_TOKEN_BUDGET)
 }
 
 /**
@@ -177,7 +245,7 @@ export function buildInitialMessages(session, userInput, observation) {
             content: [
                 history ? `历史执行摘要：\n${history}` : '',
                 `当前选中组件 ID：${selected}`,
-                `当前画布观察结果：${JSON.stringify(observation)}`,
+                `当前画布观察结果：\n${formatObservation(observation)}`,
                 `用户目标：${inputText}`,
             ].filter(Boolean).join('\n\n'),
         },

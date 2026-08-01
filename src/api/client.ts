@@ -23,9 +23,20 @@ export function buildApiHeaders(headers: Record<string, string> = {}): Record<st
 }
 
 export function createApiClient(timeout: number): AxiosInstance {
-    return axios.create({
+    const client = axios.create({
         baseURL: API_BASE_URL,
         timeout,
         headers: buildApiHeaders({ 'Content-Type': 'application/json' }),
     })
+
+    // 统一错误处理：优先透出服务端 error 字段，兜底为通用提示
+    client.interceptors.response.use(
+        (response) => response,
+        (error) => {
+            const message = error.response?.data?.error || error.message || '请求失败'
+            error.message = message
+            return Promise.reject(error)
+        },
+    )
+    return client
 }

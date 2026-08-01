@@ -4,8 +4,13 @@
             <el-collapse-item title="通用样式" name="style">
                 <el-form>
                     <el-form-item v-for="({ key, label }, index) in styleKeys" :key="index" :label="label">
-                        <el-color-picker v-if="isIncludesColor(key)" v-model="curComponent.style[key]" show-alpha />
-                        <el-select v-else-if="selectKey.includes(key)" v-model="curComponent.style[key]">
+                        <el-color-picker
+                            v-if="isIncludesColor(key)"
+                            v-model="curComponent.style[key]"
+                            show-alpha
+                            @change="commitStyle(key)"
+                        />
+                        <el-select v-else-if="selectKey.includes(key)" v-model="curComponent.style[key]" @change="commitStyle(key)">
                             <el-option
                                 v-for="item in optionMap[key]"
                                 :key="item.value"
@@ -23,6 +28,7 @@
                             v-else
                             v-model.number="curComponent.style[key]"
                             type="number"
+                            @change="commitStyle(key)"
                         />
                     </el-form-item>
                 </el-form>
@@ -40,7 +46,7 @@ import { storeToRefs } from 'pinia'
 import { styleData, selectKey, optionMap } from '@/utils/attr'
 import Request from './Request.vue'
 import Linkage from './Linkage.vue'
-import { resizeComponent } from '@/composables/useCommandActions'
+import { resizeComponent, changeStyle } from '@/composables/useCommandActions'
 
 const store = useStore()
 const { curComponent } = storeToRefs(store)
@@ -68,12 +74,24 @@ function onChange() {
     curComponent.value.collapseName = activeName.value
 }
 
-function isIncludesColor(str) {
-    return str.toLowerCase().includes('color')
+function isIncludesColor(key) {
+    return key.toLowerCase().includes('color')
 }
 
 function setInitial(style) {
     initialStyle = JSON.parse(JSON.stringify(style))
+}
+
+/**
+ * 样式字段变更后通过命令系统记录，保证撤销/重做可覆盖属性面板的编辑。
+ * initialStyle 在 mousedown 时捕获，作为本次编辑的旧值快照。
+ */
+function commitStyle(key) {
+    if (!curComponent.value) return
+    const oldValue = initialStyle[key]
+    const newValue = curComponent.value.style[key]
+    if (oldValue === newValue) return
+    changeStyle(curComponent.value.id, key, oldValue, newValue)
 }
 
 function setFontSize() {

@@ -2,10 +2,12 @@ import { defineStore } from 'pinia'
 import type {
     StoreState,
     ComponentData,
+    ComponentStyle,
     CanvasStyleData,
     AreaData,
     SetCurComponentPayload,
     SetShapeStylePayload,
+    SetShapeSingleStylePayload,
     AddComponentPayload,
     AddEventPayload,
     AlterAnimationPayload,
@@ -104,9 +106,9 @@ export const useStore = defineStore('main', {
             if (rotate !== undefined) { this.curComponent.style.rotate = Math.round(rotate) }
         },
 
-        setShapeSingleStyle({ key, value }: { key: string; value: unknown }): void {
+        setShapeSingleStyle({ key, value }: SetShapeSingleStylePayload): void {
             if (this.curComponent) {
-                (this.curComponent.style as Record<string, unknown>)[key] = value
+                (this.curComponent.style as Record<keyof ComponentStyle, unknown>)[key] = value
             }
         },
 

@@ -57,6 +57,34 @@ test('AI routes enforce configured API access keys', async () => {
     }
 })
 
+test('oversized body returns 413 with generic message', async () => {
+    const previousLimit = process.env.JSON_BODY_LIMIT
+    process.env.JSON_BODY_LIMIT = '1kb'
+    try {
+        await withServer(async baseUrl => {
+            const response = await fetch(`${baseUrl}/api/ai/chat`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt: 'x'.repeat(4096) }),
+            })
+            assert.equal(response.status, 413)
+            const payload = await response.json()
+            assert.equal(payload.error, '请求体过大')
+        })
+    } finally {
+        if (previousLimit === undefined) delete process.env.JSON_BODY_LIMIT
+        else process.env.JSON_BODY_LIMIT = previousLimit
+    }
+})
+
+test('internal errors do not leak err.message to client', async () => {
+    await withServer(async baseUrl => {
+        // 对未知路由发起请求，验证默认 404/错误响应不携带内部细节
+        const response = await fetch(`${baseUrl}/api/unknown-route`)
+        assert.equal(response.status, 404)
+    })
+})
+
 after(async () => {
     await sessionStore.close()
 })

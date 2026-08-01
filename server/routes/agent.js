@@ -16,6 +16,7 @@ import { buildSystemPrompt, buildContextMessages, formatUserInput } from '../age
 import { runAgentLoop } from '../agent/agentRunner.js'
 import { parseAgentOutput } from '../agent/outputParser.js'
 import { executeSteps } from '../agent/stepExecutor.js'
+import { attachStepDiffs } from '../agent/stepDiff.js'
 import { initSSE, createSSESender, bindAbortOnClose } from '../agent/sseHelper.js'
 import { envNumber } from '../env.js'
 import { validateAgentRequest } from '../utils/requestValidation.js'
@@ -118,7 +119,7 @@ async function handleLoopRound(req, res, session, userInput, stream) {
             return res.json(buildResponse(session, result))
         } catch (error) {
             console.error('[Agent Loop] Error:', error)
-            return res.status(500).json({ error: 'Agent 执行失败: ' + error.message })
+            return res.status(500).json({ error: 'Agent 执行失败，请稍后重试' })
         }
     }
 
@@ -143,7 +144,7 @@ async function handleLoopRound(req, res, session, userInput, stream) {
         if (error.name === 'AbortError' || res.destroyed) return
         console.error('[Agent Loop] Stream error:', error)
         send('error', {
-            message: error.message || 'Agent 执行失败',
+            message: 'Agent 执行失败，请稍后重试',
             code: 'AGENT_LOOP_ERROR',
         })
         res.end()
@@ -250,7 +251,7 @@ async function handleStreamRound(req, res, session, llmRequest, userInput) {
     } catch (err) {
         if (err.name === 'AbortError' || res.destroyed) return
         console.error('[Agent] Stream error:', err)
-        send('error', { message: '生成失败: ' + err.message, code: 'INTERNAL_ERROR' })
+        send('error', { message: '生成失败，请稍后重试', code: 'INTERNAL_ERROR' })
         res.end()
     } finally {
         cleanup()
@@ -300,7 +301,7 @@ async function handleBatchRound(req, res, session, llmRequest, userInput) {
         res.json(buildResponse(session, result))
     } catch (err) {
         console.error('[Agent] Error:', err)
-        res.status(500).json({ error: '生成失败: ' + err.message })
+        res.status(500).json({ error: '生成失败，请稍后重试' })
     }
 }
 
@@ -376,7 +377,8 @@ function finalizeRound(session, contentText, reasoningText, userInput, send, res
 function buildResponse(session, result) {
     return {
         sessionId: session.id,
-        steps: result.steps,
+        // 为每个 tool_result 步骤附加增量 diff 摘要（新增/修改/删除），供前端审批 UI 使用
+        steps: attachStepDiffs(result.steps),
         preview: result.preview,
         canvasStyle: result.canvasStyle,
         done: result.done,
@@ -384,6 +386,8 @@ function buildResponse(session, result) {
         stepLimitReached: Boolean(result.stepLimitReached),
         currentDimension: result.currentDimension,
         validation: result.validation,
+        // token 用量：优先取本轮结果，回退到 session 累计值（ask_user 中断等场景）
+        tokenUsage: result.tokenUsage || session.tokenUsage || null,
         progress: {
             currentStep: result.steps.filter(s => s.type === 'tool_call' && s.status === 'success').length,
             totalSteps: result.steps.filter(s => s.type === 'tool_call').length,

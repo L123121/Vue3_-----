@@ -6,6 +6,7 @@
 
 import { executeTool } from './agentTools.js'
 import { validateCanvas } from './canvasValidator.js'
+import { normalizeToolError } from './toolError.js'
 import { nanoid } from '../utils/nanoid.js'
 import sessionStore from '../sessionStore.js'
 import { writeSSE } from './sseHelper.js'
@@ -145,17 +146,21 @@ export function executeSteps(steps, session, options = {}) {
                 executedSteps.push(resultStep)
                 if (emit) emit('tool_result', { step: resultStep })
             } catch (err) {
+                const normalized = normalizeToolError(err)
                 executedSteps[executedSteps.length - 1] = {
                     ...executedSteps[executedSteps.length - 1],
                     status: 'error',
-                    result: err.message,
+                    result: normalized.message,
+                    errorCode: normalized.code,
                 }
                 const errStep = {
                     id: `result_${step.id}`,
                     type: 'tool_result',
                     title: `执行失败: ${step.title || step.toolName}`,
-                    description: err.message,
+                    description: normalized.message,
                     status: 'error',
+                    errorCode: normalized.code,
+                    errorHint: normalized.hint,
                 }
                 executedSteps.push(errStep)
                 if (emit) emit('tool_result', { step: errStep })

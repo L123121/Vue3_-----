@@ -17,5 +17,6 @@ export { CutCommand } from './CutCommand'
 export { ClearCanvasCommand } from './ClearCanvasCommand'
 export { ImportDataCommand } from './ImportDataCommand'
 export { BatchCommand } from './BatchCommand'
+export { StyleChangeCommand } from './StyleChangeCommand'
 
 

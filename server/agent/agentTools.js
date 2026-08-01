@@ -4,6 +4,9 @@
 
 import { normalizeComponent } from '../agentHelper.js'
 import { envNumber } from '../env.js'
+import { ToolError, ToolErrorCode } from './toolError.js'
+import { validateComponentPlacement } from './canvasValidator.js'
+import { computeLayoutPositions, nextFreePosition, applyStyleDefaults } from './layoutEngine.js'
 
 const SUPPORTED_COMPONENTS = new Set([
     'VText',
@@ -26,7 +29,11 @@ function asObject(value) {
 
 function requireId(args, toolName) {
     if (!args.id || typeof args.id !== 'string') {
-        throw new Error(`${toolName} 缺少 id 参数`)
+        throw new ToolError(
+            ToolErrorCode.MISSING_ARG,
+            `${toolName} 缺少 id 参数`,
+            '请提供画布上已存在组件的真实 id（可先用 observe_canvas 获取）',
+        )
     }
     return args.id
 }
@@ -52,6 +59,23 @@ function summarizeComponent(component) {
     }
 }
 
+/**
+ * 紧凑组件摘要（观察画布时使用，控制上下文 token 开销）。
+ * 只保留定位/尺寸/图层等决策必需字段，不携带完整 style 与 propValue。
+ */
+function compactComponent(component) {
+    return {
+        id: component.id,
+        component: component.component,
+        label: component.label,
+        left: component.style?.left,
+        top: component.style?.top,
+        width: component.style?.width,
+        height: component.style?.height,
+        zIndex: component.zIndex,
+    }
+}
+
 export function observeCanvas(preview, canvasStyle, session) {
     const selectedIds = new Set(session.selectedComponentIds || [])
     const summarizedComponents = preview.map(summarizeComponent)
@@ -72,8 +96,10 @@ export function observeCanvas(preview, canvasStyle, session) {
             omittedComponentCount: Math.max(0, preview.length - visibleComponents.length),
         },
         selectedComponentIds: [...selectedIds],
+        // 选中组件保留完整详情，便于精确修改
         selectedComponents: preview.filter(component => selectedIds.has(component.id)).map(summarizeComponent),
-        components: visibleComponents,
+        // 全量组件列表用紧凑摘要，控制上下文体积
+        components: visibleComponents.map(compactComponent),
     }
 }
 
@@ -93,7 +119,7 @@ export function executeTool(toolName, rawArgs, preview, canvasStyle, session) {
         case 'inspect_component': {
             const id = requireId(args, toolName)
             const component = newPreview.find(item => item.id === id)
-            if (!component) throw new Error(`组件 ${id} 不存在`)
+            if (!component) throw new ToolError(ToolErrorCode.COMPONENT_NOT_FOUND, `组件 ${id} 不存在`, `画布上没有 id 为 ${id} 的组件，请先用 observe_canvas 获取真实 id`)
             observation = { component: summarizeComponent(component) }
             summary = `已读取组件「${component.label || component.component}」`
             break
@@ -101,12 +127,33 @@ export function executeTool(toolName, rawArgs, preview, canvasStyle, session) {
         case 'apply_layout':
             currentDimension = '布局方式'
             session.decisions.layout = String(args.layout || '')
-            summary = `已记录「${args.layout}」布局方向`
+            // 由服务端计算各组件坐标并落盘，而不是只记录决策
+            {
+                const positions = computeLayoutPositions(newPreview, newCanvasStyle, session.decisions.layout)
+                for (const position of positions) {
+                    const component = newPreview.find(item => item.id === position.id)
+                    if (component) {
+                        component.style.top = position.top
+                        component.style.left = position.left
+                    }
+                }
+                summary = `已应用「${args.layout}」布局，重新排版 ${positions.length} 个组件`
+                observation = { layout: session.decisions.layout, repositioned: positions.length }
+            }
             break
         case 'apply_style':
             currentDimension = '视觉风格'
             session.decisions.style = String(args.style || '')
-            summary = `已记录「${args.style}」视觉风格`
+            // 应用风格的确定性默认值（如背景色）
+            {
+                const stylePatch = applyStyleDefaults(newCanvasStyle, session.decisions.style)
+                Object.assign(newCanvasStyle, stylePatch)
+                summary = `已应用「${args.style}」视觉风格`
+                observation = {
+                    style: session.decisions.style,
+                    applied: Object.keys(stylePatch),
+                }
+            }
             break
         case 'apply_color_scheme':
             currentDimension = '配色方案'
@@ -122,9 +169,13 @@ export function executeTool(toolName, rawArgs, preview, canvasStyle, session) {
             break
         case 'add_component': {
             if (!SUPPORTED_COMPONENTS.has(String(args.component))) {
-                throw new Error(`不支持的组件类型: ${args.component}`)
+                throw new ToolError(
+                    ToolErrorCode.UNSUPPORTED_TYPE,
+                    `不支持的组件类型: ${args.component}`,
+                    `仅支持: ${[...SUPPORTED_COMPONENTS].join(', ')}`,
+                )
             }
-            if (newPreview.length >= 200) throw new Error('画布组件数量已达到上限')
+            if (newPreview.length >= 200) throw new ToolError(ToolErrorCode.LIMIT_REACHED, '画布组件数量已达到上限', '请先删除部分组件，或缩小本次任务范围')
             const component = normalizeComponent({
                 id: args.id || undefined,
                 component: args.component,
@@ -134,45 +185,73 @@ export function executeTool(toolName, rawArgs, preview, canvasStyle, session) {
             })
             newPreview.push(component)
             normalizeLayers(newPreview)
+            // 已设定布局模式且 LLM 未显式给出坐标时，由服务端自动补位，避免组件堆叠在 0,0
+            if (session.decisions.layout
+                && (args.style?.top === undefined || args.style?.left === undefined)) {
+                const position = nextFreePosition(
+                    newPreview,
+                    newCanvasStyle,
+                    session.decisions.layout,
+                    { width: component.style.width, height: component.style.height },
+                )
+                component.style.top = position.top
+                component.style.left = position.left
+            }
+            const placementIssues = validateComponentPlacement(component, newCanvasStyle)
             summary = `已添加「${component.label}」`
-            observation = { component: summarizeComponent(component) }
+            observation = {
+                component: summarizeComponent(component),
+                ...(placementIssues.length ? { validation: { issues: placementIssues } } : {}),
+            }
             break
         }
         case 'modify_component': {
             const id = requireId(args, toolName)
             const component = newPreview.find(item => item.id === id)
-            if (!component) throw new Error(`组件 ${id} 不存在`)
+            if (!component) throw new ToolError(ToolErrorCode.COMPONENT_NOT_FOUND, `组件 ${id} 不存在`, `画布上没有 id 为 ${id} 的组件，请先用 observe_canvas 获取真实 id`)
             if (args.style) Object.assign(component.style, asObject(args.style))
             if (args.propValue !== undefined) component.propValue = args.propValue
             if (typeof args.label === 'string') component.label = args.label
+            const modifyIssues = validateComponentPlacement(component, newCanvasStyle)
             summary = `已修改组件「${component.label}」`
-            observation = { component: summarizeComponent(component) }
+            observation = {
+                component: summarizeComponent(component),
+                ...(modifyIssues.length ? { validation: { issues: modifyIssues } } : {}),
+            }
             break
         }
         case 'move_component': {
             const id = requireId(args, toolName)
             const component = newPreview.find(item => item.id === id)
-            if (!component) throw new Error(`组件 ${id} 不存在`)
+            if (!component) throw new ToolError(ToolErrorCode.COMPONENT_NOT_FOUND, `组件 ${id} 不存在`, `画布上没有 id 为 ${id} 的组件，请先用 observe_canvas 获取真实 id`)
             if (Number.isFinite(Number(args.top))) component.style.top = Number(args.top)
             if (Number.isFinite(Number(args.left))) component.style.left = Number(args.left)
+            const moveIssues = validateComponentPlacement(component, newCanvasStyle)
             summary = `已移动组件「${component.label}」`
-            observation = { component: summarizeComponent(component) }
+            observation = {
+                component: summarizeComponent(component),
+                ...(moveIssues.length ? { validation: { issues: moveIssues } } : {}),
+            }
             break
         }
         case 'resize_component': {
             const id = requireId(args, toolName)
             const component = newPreview.find(item => item.id === id)
-            if (!component) throw new Error(`组件 ${id} 不存在`)
+            if (!component) throw new ToolError(ToolErrorCode.COMPONENT_NOT_FOUND, `组件 ${id} 不存在`, `画布上没有 id 为 ${id} 的组件，请先用 observe_canvas 获取真实 id`)
             if (Number.isFinite(Number(args.width)) && Number(args.width) > 0) component.style.width = Number(args.width)
             if (Number.isFinite(Number(args.height)) && Number(args.height) > 0) component.style.height = Number(args.height)
+            const resizeIssues = validateComponentPlacement(component, newCanvasStyle)
             summary = `已调整组件「${component.label}」尺寸`
-            observation = { component: summarizeComponent(component) }
+            observation = {
+                component: summarizeComponent(component),
+                ...(resizeIssues.length ? { validation: { issues: resizeIssues } } : {}),
+            }
             break
         }
         case 'delete_component': {
             const id = requireId(args, toolName)
             const target = newPreview.find(component => component.id === id)
-            if (!target) throw new Error(`组件 ${id} 不存在`)
+            if (!target) throw new ToolError(ToolErrorCode.COMPONENT_NOT_FOUND, `组件 ${id} 不存在`, `画布上没有 id 为 ${id} 的组件，请先用 observe_canvas 获取真实 id`)
             const deletingIds = new Set([id])
             let changed = true
             while (changed) {
@@ -198,7 +277,7 @@ export function executeTool(toolName, rawArgs, preview, canvasStyle, session) {
         case 'reorder_layer': {
             const id = requireId(args, toolName)
             const index = newPreview.findIndex(component => component.id === id)
-            if (index === -1) throw new Error(`组件 ${id} 不存在`)
+            if (index === -1) throw new ToolError(ToolErrorCode.COMPONENT_NOT_FOUND, `组件 ${id} 不存在`, `画布上没有 id 为 ${id} 的组件，请先用 observe_canvas 获取真实 id`)
             const action = String(args.action || '')
             let targetIndex = index
             if (action === 'up') targetIndex = Math.min(newPreview.length - 1, index + 1)
@@ -213,7 +292,11 @@ export function executeTool(toolName, rawArgs, preview, canvasStyle, session) {
             break
         }
         default:
-            throw new Error(`未知工具: ${toolName}`)
+            throw new ToolError(
+                ToolErrorCode.UNKNOWN_TOOL,
+                `未知工具: ${toolName}`,
+                `可用工具: ${['observe_canvas', 'inspect_component', 'apply_layout', 'apply_style', 'apply_color_scheme', 'set_canvas_style', 'add_component', 'modify_component', 'move_component', 'resize_component', 'delete_component', 'reorder_layer'].join(', ')}`,
+            )
     }
 
     return {

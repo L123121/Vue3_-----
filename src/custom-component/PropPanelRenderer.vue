@@ -39,6 +39,7 @@ import { storeToRefs } from 'pinia'
 import CommonAttr from './common/CommonAttr.vue'
 import { getComponentMeta, getAttrComponent } from './registry'
 import { getControl } from './controls'
+import { changeStyle } from '@/composables/useCommandActions'
 import type { PropConfig } from './registry'
 
 const store = useStore()
@@ -91,6 +92,16 @@ function getValue(path: string): unknown {
  */
 function setValue(path: string, value: unknown): void {
     if (!curComponent.value) return
+    const oldValue = getValue(path)
+    if (oldValue === value) return
+
+    // 样式字段通过命令系统记录，保证可撤销/重做
+    if (path.startsWith('style.')) {
+        const key = path.slice('style.'.length)
+        changeStyle(curComponent.value.id, key, oldValue, value)
+        return
+    }
+
     const keys = path.split('.')
     const lastKey = keys.pop()!
     const target = keys.reduce((obj: unknown, key: string) => {

@@ -9,6 +9,9 @@
                     {{ editorComponents.length }} 个现有组件
                 </span>
                 <span v-if="currentDimension" class="dim-badge">{{ currentDimension }}</span>
+                <span v-if="tokenUsage" class="token-badge" :title="tokenUsageTitle">
+                    ⚡ {{ tokenUsage.totalTokens.toLocaleString() }} tokens
+                </span>
                 <span class="agent-status" :class="`status-${statusTone}`">{{ statusLabel }}</span>
             </div>
             <div class="header-right">
@@ -121,6 +124,22 @@
                                 <span class="result-icon">→</span>
                                 <span class="result-text">{{ resultStepTitle(step, steps) }}</span>
                                 <span v-if="step.description" class="result-desc">{{ step.description }}</span>
+                                <!-- 步骤审批：勾选应用 / 取消跳过 -->
+                                <label
+                                    v-if="step.preview && step.preview.length"
+                                    class="step-approve"
+                                    :class="{ disabled: loading }"
+                                    @click.stop
+                                >
+                                    <input
+                                        type="checkbox"
+                                        :checked="isStepApproved(step.id)"
+                                        :disabled="loading"
+                                        @change="toggleStepApproval(step.id)"
+                                    />
+                                    <span>{{ isStepApproved(step.id) ? '应用此步' : '跳过此步' }}</span>
+                                </label>
+                                <span v-if="step.diff?.summary" class="step-diff">{{ step.diff.summary }}</span>
                             </div>
                             <!-- 连续多步卡片选择：ask_user 嵌在 agent 组内 -->
                             <div v-else-if="step.type === 'user_input' && step.cards?.length" class="group-ask-cards">
@@ -348,7 +367,7 @@ import {
     toolStepTitle,
     type MessageGroup,
 } from './agent/presentation'
-import type { AgentStep, AgentCard, AgentContext, AgentValidationReport, RoundResponse } from '@/types/agent'
+import type { AgentStep, AgentCard, AgentContext, AgentValidationReport, RoundResponse, TokenUsage } from '@/types/agent'
 import type { ComponentData, CanvasStyleData } from '@/types'
 
 const props = defineProps<{ modelValue: boolean }>()
@@ -416,6 +435,64 @@ function pushTypewriter(chars: string) {
 // P3: 画布快照链（用于步骤级 undo）
 const canvasSnapshots = ref<{ preview: ComponentData[], canvasStyle: CanvasStyleData, label: string }[]>([])
 
+// P4: 步骤审批 —— 记录被勾选（应用）的 tool_result 步骤 id，默认全部应用
+const approvedStepIds = ref<Set<string>>(new Set())
+
+function isStepApproved(stepId: string): boolean {
+    return approvedStepIds.value.has(stepId)
+}
+
+function toggleStepApproval(stepId: string) {
+    if (loading.value) return
+    const next = new Set(approvedStepIds.value)
+    if (next.has(stepId)) {
+        next.delete(stepId)
+    } else {
+        next.add(stepId)
+    }
+    approvedStepIds.value = next
+}
+
+/**
+ * 最后一个被勾选的 tool_result 步骤画布快照。
+ * 用户取消勾选后续步骤时，应用结果回退到该快照（逐步确认语义）。
+ */
+const approvedPreview = computed<ComponentData[]>(() => {
+    let snapshot: ComponentData[] = []
+    for (const step of steps.value) {
+        if (step.type === 'tool_result'
+            && Array.isArray(step.preview)
+            && step.preview.length
+            && approvedStepIds.value.has(step.id)) {
+            snapshot = step.preview
+        }
+    }
+    return snapshot
+})
+
+/**
+ * 按执行顺序收集所有已勾选步骤的画布快照链。
+ * 应用时逐条压入 ImportDataCommand，使撤销可单步回退。
+ */
+const approvedSnapshots = computed<ComponentData[][]>(() => {
+    const snapshots: ComponentData[][] = []
+    for (const step of steps.value) {
+        if (step.type === 'tool_result'
+            && Array.isArray(step.preview)
+            && step.preview.length
+            && approvedStepIds.value.has(step.id)) {
+            snapshots.push(step.preview)
+        }
+    }
+    return snapshots
+})
+
+/** 未应用的步骤数（用于提示） */
+const skippedStepCount = computed(() => {
+    const resultSteps = steps.value.filter(step => step.type === 'tool_result' && step.preview?.length)
+    return resultSteps.filter(step => !approvedStepIds.value.has(step.id)).length
+})
+
 const streamError = ref<string | null>(null)
 const stopped = ref(false)
 const selectedCardId = ref<string | null>(null)
@@ -423,6 +500,8 @@ const previewCollapsed = ref(false)
 const progress = ref<RoundResponse['progress'] | null>(null)
 const stepLimitReached = ref(false)
 const validation = ref<AgentValidationReport | null>(null)
+// token 用量（服务端 buildResponse 透出，session 累计值）
+const tokenUsage = ref<TokenUsage | null>(null)
 const lastRequest = ref<{ input: { type: 'card_select' | 'free_text'; value: string; cardId?: string }; resume: boolean } | null>(null)
 
 async function syncPreviewObserver() {
@@ -566,7 +645,7 @@ const hasValidationErrors = computed(() => Boolean(validation.value?.errors.leng
 
 const canApplyToCanvas = computed(() => (
     !loading.value
-    && previewComponents.value.length > 0
+    && (approvedPreview.value.length > 0 || previewComponents.value.length > 0)
 ))
 
 const statusLabel = computed(() => {
@@ -587,6 +666,13 @@ const statusTone = computed(() => {
     if (done.value) return 'success'
     if (waitingForInput.value) return 'waiting'
     return 'idle'
+})
+
+/** token badge 的悬浮提示：输入/输出明细 */
+const tokenUsageTitle = computed(() => {
+    if (!tokenUsage.value) return ''
+    const { promptTokens, completionTokens } = tokenUsage.value
+    return `本轮累计 token：输入 ${promptTokens.toLocaleString()} / 输出 ${completionTokens.toLocaleString()}`
 })
 
 const loadingLabel = computed(() => {
@@ -708,6 +794,12 @@ async function streamSendMessage(input: { type: 'card_select' | 'free_text'; val
                     if (!steps.value.some(s => s.id === step.id)) {
                         steps.value.push({ ...step })
                     }
+                    // P4: 新步骤默认勾选应用
+                    if (step.preview && Array.isArray(step.preview) && step.preview.length) {
+                        const next = new Set(approvedStepIds.value)
+                        next.add(step.id)
+                        approvedStepIds.value = next
+                    }
                     // 增量合并：只在 step 确实携带了画布快照时更新，避免中间态清空预览
                     if (step.preview && Array.isArray(step.preview) && step.preview.length > 0) {
                         if (!previewComponents.value.length) previewCollapsed.value = false
@@ -742,6 +834,22 @@ async function streamSendMessage(input: { type: 'card_select' | 'free_text'; val
                     validation.value = res.validation || null
                     done.value = res.done
                     waitingForInput.value = res.waitingForInput
+                    // token 用量：每轮完成后更新（session 累计值）
+                    if (res.tokenUsage) tokenUsage.value = res.tokenUsage
+                    // P4: 合并服务端附加的步骤 diff 摘要（SSE 流式推送的步骤不带 diff）
+                    if (Array.isArray(res.steps) && res.steps.length) {
+                        const diffMap = new Map(
+                            res.steps
+                                .filter(step => step.diff)
+                                .map(step => [step.id, step.diff]),
+                        )
+                        if (diffMap.size) {
+                            steps.value = steps.value.map(step => {
+                                const diff = diffMap.get(step.id)
+                                return diff ? { ...step, diff } : step
+                            })
+                        }
+                    }
                     if ((res.done || res.stepLimitReached) && !steps.value.some(step => step.type === 'done' && step.status === 'success')) {
                         // 已有 stepLimitReached 步骤时不再重复添加
                         steps.value.push({
@@ -831,9 +939,14 @@ function retryLastRequest() {
 async function applyToCanvas() {
     if (!canApplyToCanvas.value) return
 
+    // P4: 应用已勾选步骤的最终快照；用户跳过部分步骤时回退到最后一个勾选步骤
+    const targetPreview = approvedPreview.value.length ? approvedPreview.value : previewComponents.value
     const notices: string[] = []
     if (!done.value && !stepLimitReached.value) {
         notices.push('Agent 尚未完成全部步骤，将应用当前预览。')
+    }
+    if (skippedStepCount.value > 0) {
+        notices.push(`已跳过 ${skippedStepCount.value} 个步骤，将应用最后一个勾选步骤之后的画布状态。`)
     }
     if (validation.value?.errors.length) {
         notices.push(`当前仍有 ${validation.value.errors.length} 个校验问题，应用后可在画布中继续调整。`)
@@ -858,14 +971,22 @@ async function applyToCanvas() {
     }
 
     try {
-        const expectedIds = new Set(previewComponents.value.map(component => component.id))
-        importDataWithCommand(previewComponents.value, canvasStyle.value)
+        // P4: 按顺序应用每个已勾选步骤的快照，逐条压入命令栈 → 撤销可单步回退
+        const snapshots = approvedSnapshots.value.length ? approvedSnapshots.value : [previewComponents.value]
+        for (const snapshot of snapshots) {
+            importDataWithCommand(snapshot, canvasStyle.value)
+        }
+        const targetPreview = snapshots[snapshots.length - 1] || []
+        const expectedIds = new Set(targetPreview.map(component => component.id))
         const appliedIds = new Set(store.componentData.map(component => component.id))
         const missingIds = [...expectedIds].filter(id => !appliedIds.has(id))
-        if (store.componentData.length !== previewComponents.value.length || missingIds.length) {
+        if (store.componentData.length !== targetPreview.length || missingIds.length) {
             throw new Error('画布数据校验失败，请重试')
         }
-        ElMessage.success('已应用到画布')
+        const stepHint = snapshots.length > 1
+            ? `已应用 ${snapshots.length} 个步骤，可逐条撤销`
+            : skippedStepCount.value > 0 ? `已应用（跳过 ${skippedStepCount.value} 步）` : '已应用到画布'
+        ElMessage.success(stepHint)
         close()
     } catch (error) {
         const message = error instanceof Error ? error.message : '未知错误'
@@ -878,6 +999,7 @@ function clearAll() {
     steps.value = []
     previewComponents.value = []
     canvasSnapshots.value = []
+    approvedStepIds.value = new Set()
     sessionId.value = null
     done.value = false
     waitingForInput.value = false
@@ -889,6 +1011,7 @@ function clearAll() {
     progress.value = null
     stepLimitReached.value = false
     validation.value = null
+    tokenUsage.value = null
     lastRequest.value = null
 }
 
@@ -1040,6 +1163,17 @@ watch(() => props.modelValue, (val) => {
   background: rgba(64, 158, 255, 0.12);
   color: var(--primary-color);
   border-radius: 10px;
+}
+
+// token 用量 badge
+.token-badge {
+  font-size: 11px;
+  padding: 2px 8px;
+  background: rgba(103, 194, 58, 0.12);
+  color: #67c23a;
+  border-radius: 10px;
+  white-space: nowrap;
+  cursor: help;
 }
 
 .header-right {
@@ -1261,6 +1395,40 @@ watch(() => props.modelValue, (val) => {
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 200px;
+}
+
+// P4: 步骤审批（勾选应用 / 跳过）
+.step-approve {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  font-size: var(--agent-log-meta-size);
+  color: var(--text-secondary, #666);
+  cursor: pointer;
+  user-select: none;
+
+  input[type="checkbox"] {
+    accent-color: var(--primary-color, #409eff);
+    cursor: pointer;
+  }
+
+  &.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+
+    input { cursor: not-allowed; }
+  }
+}
+
+.step-diff {
+  flex-basis: 100%;
+  margin-left: 24px;
+  font-size: var(--agent-log-meta-size);
+  color: var(--text-tertiary, #888);
+  background: var(--bg-tertiary, #f4f4f5);
+  padding: 1px 8px;
+  border-radius: 6px;
 }
 
 // ask_user 卡片（Agent 组内联）

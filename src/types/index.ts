@@ -172,6 +172,12 @@ export interface SetShapeStylePayload {
   rotate?: number
 }
 
+/** 单样式字段修改 payload，key 限定为 ComponentStyle 的合法键 */
+export interface SetShapeSingleStylePayload {
+  key: keyof ComponentStyle
+  value: ComponentStyle[keyof ComponentStyle]
+}
+
 export interface AddComponentPayload {
   component: ComponentData
   index?: number

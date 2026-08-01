@@ -31,6 +31,7 @@ import {
     ImportDataCommand,
     CutCommand,
     PasteCommand,
+    StyleChangeCommand,
 } from '@/commands'
 import type { CommandEnvelope } from '@/commands/types'
 
@@ -277,6 +278,18 @@ export function resizeComponent(componentId: string, oldStyle: Partial<Component
 export function rotateComponent(componentId: string, oldRotate: number, newRotate: number): void {
     const store = useStore()
     commandManager.execute(new RotateCommand(componentId, oldRotate, newRotate))
+    store.markDataDirty()
+}
+
+/**
+ * 修改组件单个样式字段（属性面板等静态编辑场景）。
+ * 通过 StyleChangeCommand 入栈，使样式编辑可撤销/重做。
+ * 注意：拖拽/缩放等实时交互由 Shape.vue 在结束时统一记录 Move/Resize 命令，
+ * 不应在每帧调用本函数。
+ */
+export function changeStyle(componentId: string, key: string, oldValue: unknown, newValue: unknown): void {
+    const store = useStore()
+    commandManager.execute(new StyleChangeCommand(componentId, key, oldValue, newValue))
     store.markDataDirty()
 }
 

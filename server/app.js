@@ -45,9 +45,12 @@ export function createApp() {
 
     app.use((error, req, res, next) => {
         if (res.headersSent) return next(error)
-        const status = error?.type === 'entity.too.large' ? 413 : 500
-        const message = status === 413 ? '请求体过大' : (error?.message || '服务器内部错误')
-        return res.status(status).json({ error: message })
+        // 生产环境不向客户端泄露内部错误细节，仅记录服务端日志
+        if (error?.type === 'entity.too.large') {
+            return res.status(413).json({ error: '请求体过大' })
+        }
+        console.error('[API] 未处理异常:', error)
+        return res.status(500).json({ error: '服务器内部错误' })
     })
 
     return app

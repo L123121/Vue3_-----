@@ -33,8 +33,17 @@ describe('isSafeUrl - URL 安全验证', () => {
         expect(isSafeUrl('http://example.com')).toBe(true)
     })
 
-    it('data: URL 通过', () => {
+    it('data:image URL 通过', () => {
         expect(isSafeUrl('data:image/png;base64,abc')).toBe(true)
+    })
+
+    it('data:text/html 被阻止（防 XSS）', () => {
+        expect(isSafeUrl('data:text/html,<script>alert(1)</script>')).toBe(false)
+        expect(isSafeUrl('data:application/javascript;base64,YWxlcnQoMSk=')).toBe(false)
+    })
+
+    it('协议相对地址被阻止', () => {
+        expect(isSafeUrl('//evil.com/path')).toBe(false)
     })
 
     it('相对路径通过', () => {
@@ -117,5 +126,10 @@ describe('isValidCssColor - CSS 颜色验证', () => {
     it('无效格式不通过', () => {
         expect(isValidCssColor('#ggg')).toBe(false)
         expect(isValidCssColor('not-a-color')).toBe(false)
+    })
+
+    it('非标准颜色名不通过', () => {
+        expect(isValidCssColor('evil')).toBe(false)
+        expect(isValidCssColor('notacolor')).toBe(false)
     })
 })

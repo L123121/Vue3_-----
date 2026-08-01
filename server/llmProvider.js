@@ -52,6 +52,29 @@ function describeFailure(error) {
     return error instanceof Error ? error.message : '未知错误'
 }
 
+/**
+ * 从响应中提取 usage（不消费原始 response body，通过 clone 读取）。
+ * 流式响应跳过提取，避免缓冲整个 SSE 流。
+ * @param {Response} response
+ * @returns {Promise<object|null>}
+ */
+async function extractUsage(response) {
+    try {
+        const clone = response.clone()
+        const data = await clone.json()
+        const usage = data?.usage
+        if (!usage || typeof usage !== 'object') return null
+        return {
+            promptTokens: Number(usage.prompt_tokens) || 0,
+            completionTokens: Number(usage.completion_tokens) || 0,
+            totalTokens: Number(usage.total_tokens)
+                || (Number(usage.prompt_tokens) || 0) + (Number(usage.completion_tokens) || 0),
+        }
+    } catch {
+        return null
+    }
+}
+
 function createRequestSignal(parentSignal, timeoutMs) {
     const controller = new AbortController()
     const onParentAbort = () => controller.abort(parentSignal.reason)
@@ -73,7 +96,10 @@ function createRequestSignal(parentSignal, timeoutMs) {
 
 export function createProviderPool(providers, options = {}) {
     const configuredProviders = Array.isArray(providers)
-        ? providers.filter(provider => provider?.apiKey && provider?.baseUrl && provider?.model)
+        ? providers.filter(provider => (
+            typeof provider?.fetchChat === 'function'
+            || (provider?.apiKey && provider?.baseUrl && provider?.model)
+        ))
         : []
     if (!configuredProviders.length) {
         throw new Error('AI 服务尚未配置，请设置主模型或备用模型密钥')
@@ -92,6 +118,21 @@ export function createProviderPool(providers, options = {}) {
             for (let offset = 0; offset < configuredProviders.length; offset++) {
                 const providerIndex = (startIndex + offset) % configuredProviders.length
                 const provider = configuredProviders[providerIndex]
+
+                // Mock / 委托 provider：直接调用其实现，不走 HTTP（用于 Eval 与测试）
+                if (typeof provider.fetchChat === 'function') {
+                    try {
+                        return await provider.fetchChat(payload, requestOptions)
+                    } catch (error) {
+                        if (requestOptions.signal?.aborted) throw error
+                        lastError = error
+                        const hasNextProvider = offset < configuredProviders.length - 1
+                        if (!hasNextProvider) throw error
+                        options.logger?.warn?.(`[LLM] mock provider 不可用: ${error.message}`)
+                        continue
+                    }
+                }
+
                 const requestSignal = createRequestSignal(
                     requestOptions.signal,
                     requestOptions.timeoutMs || DEFAULT_REQUEST_TIMEOUT_MS,
@@ -122,7 +163,9 @@ export function createProviderPool(providers, options = {}) {
                             reason: describeFailure(lastError),
                         })
                     }
-                    return { response, provider }
+                    // 非流式请求附带 usage（token 统计），流式请求透出 null
+                    const usage = payload.stream ? null : await extractUsage(response)
+                    return { response, provider, usage }
                 } catch (error) {
                     if (requestOptions.signal?.aborted) throw error
                     const normalizedError = requestSignal.isTimeout()

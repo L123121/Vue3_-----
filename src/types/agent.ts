@@ -50,6 +50,14 @@ export interface AgentValidationReport {
     warnings: AgentValidationIssue[]
 }
 
+/** 步骤增量 diff 摘要（服务端 attachStepDiffs 生成，供审批 UI 展示） */
+export interface AgentStepDiff {
+    added: string[]
+    modified: string[]
+    removed: string[]
+    summary: string
+}
+
 export interface AgentStep {
     id: string
     type: StepType
@@ -64,6 +72,7 @@ export interface AgentStep {
     canvasStyle?: CanvasStyleData
     observation?: Record<string, unknown>
     validation?: AgentValidationReport
+    diff?: AgentStepDiff
 }
 
 export interface AgentViewport {
@@ -112,6 +121,13 @@ export interface RoundRequest {
     mode?: 'loop' | 'legacy'
 }
 
+/** token 用量统计（服务端 llmProvider 透出 + session 累计） */
+export interface TokenUsage {
+    promptTokens: number
+    completionTokens: number
+    totalTokens: number
+}
+
 export interface RoundResponse {
     sessionId: string
     steps: AgentStep[]
@@ -122,6 +138,7 @@ export interface RoundResponse {
     currentDimension: string
     stepLimitReached?: boolean
     validation?: AgentValidationReport
+    tokenUsage?: TokenUsage
     progress: {
         currentStep: number
         totalSteps: number

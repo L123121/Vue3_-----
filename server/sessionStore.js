@@ -60,6 +60,8 @@ class SessionStore {
             sourceDataVersion: undefined,
             round: 0,
             status: 'active',
+            /** 累计 token 用量（成本观测） */
+            tokenUsage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
         }
         this.sessions.set(id, session)
         this.persist(session)
@@ -139,7 +141,8 @@ class SessionStore {
     }
 
     generateId() {
-        return `sess_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`
+        // 使用密码学安全随机数（Node 18+ 全局 crypto），避免可预测的会话 ID
+        return `sess_${crypto.randomUUID().replace(/-/g, '')}`
     }
 }
 

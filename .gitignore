@@ -33,3 +33,6 @@ pnpm-debug.log*
 *.njsproj
 *.sln
 *.sw?
+
+# Agent Eval 生成的报告（运行产物，不入库）
+server/eval/reports/
